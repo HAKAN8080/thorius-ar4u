@@ -66,20 +66,20 @@ charge_token(username, module_name)
 # ==================== SIDEBAR (BEFORE set_page_config) ====================
 
 with st.sidebar:
-    # User Profile Card (BÜYÜK VERSİYON - Resim gibi)
+    # User Profile Card (BÜYÜK VERSİYON - %15 küçültülmüş)
     user_info = st.session_state.get('user_info', {})
     user_name = user_info.get('name', 'Kullanıcı')
     user_title = user_info.get('title', 'Misafir')
     user_role = user_info.get('role', 'VIEWER')
     
     st.markdown(f"""
-    <div style='padding: 30px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                border-radius: 15px; margin-bottom: 20px; text-align: center; color: white;'>
-        <div style='font-size: 4rem; margin-bottom: 15px;'>👤</div>
-        <div style='font-size: 1.4rem; font-weight: 700; margin-bottom: 8px;'>{user_name}</div>
-        <div style='font-size: 1rem; opacity: 0.9; margin-bottom: 15px;'>{user_title}</div>
-        <div style='display: inline-block; padding: 8px 20px; background: rgba(255,255,255,0.25); 
-                    border-radius: 25px; font-size: 0.9rem; font-weight: 600;'>
+    <div style='padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                border-radius: 10px; margin-bottom: 20px; text-align: center; color: white;'>
+        <div style='font-size: 3rem; margin-bottom: 10px;'>👤</div>
+        <div style='font-size: 1.2rem; font-weight: 600; margin-bottom: 5px;'>{user_name}</div>
+        <div style='font-size: 0.9rem; opacity: 0.8; margin-bottom: 10px;'>{user_title}</div>
+        <div style='display: inline-block; padding: 5px 10px; background: rgba(255,255,255,0.2); 
+                    border-radius: 20px; font-size: 0.85rem;'>
             {user_role.upper()}
         </div>
     </div>
