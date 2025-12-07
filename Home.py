@@ -8,7 +8,7 @@ from token_manager import (
 
 # Sayfa yapılandırması
 st.set_page_config(
-    page_title="Thorius AR4U - Retail Analytics Platform",
+    page_title="Thorius AR4U - Retail Platform",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -68,7 +68,6 @@ def check_password():
     st.markdown("""
     <div class="login-header">
         <div class="login-title">Thorius AR4U</div>
-       . <div class="login-subtitle">Retail Analytics Platform</div>
     </div>
     """, unsafe_allow_html=True)
     
