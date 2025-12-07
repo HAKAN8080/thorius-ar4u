@@ -41,24 +41,36 @@ if 'authenticated' not in st.session_state or not st.session_state.authenticated
     st.stop()
 
 # Get username from session
-username = st.session_state.get('username', 'demo')
+username = st.session_state.get('username')
+if not username:
+    username = st.session_state.get('user_info', {}).get('username', 'demo')
 
-# Token kontrolü (10 token)
+# Token kontrolü (10 token) - 6 SAAT KURALI İLE
 module_name = "sevkiyat_ml"
-required_tokens = 10
 
-# Token kontrolü yap
-can_access = check_token_charge(username, module_name)
+# Önce token yeterli mi kontrol et
+should_charge = check_token_charge(username, module_name)
 
-if not can_access:
-    remaining = get_token_balance(username)
-    st.error(f"❌ Yetersiz token! Bu modül için {required_tokens} token gerekiyor.")
-    st.info(f"💰 Kalan token: {remaining}")
-    st.info("💡 Ana sayfaya dönüp token satın alabilirsiniz")
-    st.stop()
-
-# Token'ı kes
-charge_token(username, module_name)
+if should_charge:
+    # Token kesme işlemi
+    success, remaining, message = charge_token(username, module_name)
+    
+    if not success:
+        st.error(f"❌ {message}")
+        st.error("💰 Token bakiyeniz tükendi!")
+        st.info("💡 Ana sayfaya dönüp token satın alabilirsiniz")
+        st.stop()
+    else:
+        # Session'daki token bilgisini güncelle
+        if 'user_info' in st.session_state:
+            st.session_state.user_info['remaining_tokens'] = remaining
+        
+        # Uyarı göster (düşük bakiye)
+        if remaining <= 10:
+            st.warning(f"⚠️ Token azalıyor! Kalan: {remaining}")
+else:
+    # 6 saat içinde zaten girilmiş, token kesme
+    pass
 
 # ==================== ORIGINAL CODE STARTS HERE ====================
 
