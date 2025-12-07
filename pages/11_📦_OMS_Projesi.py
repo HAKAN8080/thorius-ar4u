@@ -14,301 +14,48 @@ from token_manager import (
 st.set_page_config(page_title="Depo Birleştirme - Proje Yönetimi", layout="wide", page_icon="📦")
 
 # ==============================================
-# KULLANICI YETKİLENDİRME SİSTEMİ
+# AUTHENTICATION KONTROLÜ
 # ==============================================
 
-# ==============================================
-# TOKEN YÖNETİMİ - SABITLER
-# ==============================================
-
-# OMS Projesi için token maliyeti
-MODULE_TOKEN_COST = 1  # Her giriş için 1 token
-
-# Kullanıcı veritabanı (şifreler SHA256 ile hash'lenmiş)
-USERS = {
-    "ertugrul": {
-        "password": hashlib.sha256("lojistik2025".encode()).hexdigest(),
-        "role": "sponsor",
-        "name": "Ertuğrul Bey",
-        "title": "Lojistik GMY",
-        "initial_tokens": 100
-    },
-    "gokhan": {
-        "password": hashlib.sha256("ecom2025".encode()).hexdigest(),
-        "role": "sponsor",
-        "name": "Gökhan Bey",
-        "title": "ECOM GMY",
-        "initial_tokens": 100
-    },
-    "volkan": {
-        "password": hashlib.sha256("magaza2025".encode()).hexdigest(),
-        "role": "manager",
-        "name": "Volkan Bey",
-        "title": "Mağazacılık GMY",
-        "initial_tokens": 100
-    },
-    "ferhat": {
-        "password": hashlib.sha256("stok2025".encode()).hexdigest(),
-        "role": "manager",
-        "name": "Ferhat Bey",
-        "title": "Stok Yönetimi Direktörü",
-        "initial_tokens": 100
-    },
-    "tayfun": {
-        "password": hashlib.sha256("eve2025".encode()).hexdigest(),
-        "role": "manager",
-        "name": "Tayfun Bey",
-        "title": "EVE GM",
-        "initial_tokens": 100
-    },
-    "aliakcay": {
-        "password": hashlib.sha256("tzy2025".encode()).hexdigest(),
-        "role": "user",
-        "name": "Ali Akçay",
-        "title": "EVE TZY Direktörü",
-        "initial_tokens": 100
-    },
-    "ozcan": {
-        "password": hashlib.sha256("it2025".encode()).hexdigest(),
-        "role": "admin",
-        "name": "Özcan Bey",
-        "title": "IT GMY",
-        "initial_tokens": 100
-    },
-    "demo": {
-        "password": hashlib.sha256("demo2025".encode()).hexdigest(),
-        "role": "viewer",
-        "name": "Demo Kullanıcı",
-        "title": "Misafir",
-        "initial_tokens": 100
-    }
-}
-
-# ==============================================
-# TOKEN YÖNETİM FONKSİYONLARI
-# ==============================================
-
-def init_token_system():
-    """Token sistemini başlat"""
-    if "token_data" not in st.session_state:
-        st.session_state.token_data = {}
+if "authenticated" not in st.session_state or not st.session_state.authenticated:
+    st.error("❌ Bu sayfaya erişmek için giriş yapmalısınız!")
+    st.info("👉 Lütfen ana sayfadan giriş yapın.")
     
-    # Kullanıcının token bilgilerini yükle
-    username = st.session_state.get("username")
-    if username and username not in st.session_state.token_data:
-        st.session_state.token_data[username] = {
-            "remaining_tokens": USERS[username]["initial_tokens"],
-            "total_tokens": USERS[username]["initial_tokens"],
-            "last_login": None,
-            "last_login_date": None,
-            "login_count_today": 0,
-            "tokens_used_today": 0
-        }
-
-def check_token_charge():
-    """Token düşürme kararı - 6 saat kuralı"""
-    username = st.session_state.username
-    now = datetime.now()
-    
-    token_info = st.session_state.token_data[username]
-    last_login = token_info["last_login"]
-    last_date = token_info["last_login_date"]
-    
-    # İlk giriş
-    if last_login is None:
-        return True
-    
-    # Bugünün tarihi
-    today = now.date()
-    
-    # Yeni gün mü?
-    if last_date != today:
-        # Gün değişti, token düşecek
-        token_info["login_count_today"] = 0
-        token_info["tokens_used_today"] = 0
-        return True
-    
-    # Aynı gün içinde - 6 saat kontrolü
-    hours_since_login = (now - last_login).total_seconds() / 3600
-    
-    if hours_since_login >= 6:
-        # 6 saat geçmiş, token düşer
-        return True
-    
-    # 6 saat dolmamış, token düşmez
-    return False
-
-def charge_token():
-    """Token düş"""
-    username = st.session_state.username
-    now = datetime.now()
-    
-    token_info = st.session_state.token_data[username]
-    
-    # Token düş
-    if token_info["remaining_tokens"] > 0:
-        token_info["remaining_tokens"] -= MODULE_TOKEN_COST
-        token_info["tokens_used_today"] += MODULE_TOKEN_COST
-        token_info["login_count_today"] += 1
-        token_info["last_login"] = now
-        token_info["last_login_date"] = now.date()
-        return True
-    else:
-        return False
-
-def get_token_balance():
-    """Token bakiyesini getir"""
-    username = st.session_state.username
-    return st.session_state.token_data[username]["remaining_tokens"]
-
-def get_token_usage_percent():
-    """Token kullanım yüzdesini hesapla"""
-    username = st.session_state.username
-    token_info = st.session_state.token_data[username]
-    used = token_info["total_tokens"] - token_info["remaining_tokens"]
-    return int((used / token_info["total_tokens"]) * 100)
-
-def check_password():
-    """Kullanıcı girişi kontrolü"""
-    
-    # Session state başlat
-    if "authenticated" not in st.session_state:
-        st.session_state.authenticated = False
-        st.session_state.username = None
-        st.session_state.user_info = None
-    
-    # Zaten giriş yaptıysa
-    if st.session_state.authenticated:
-        return True
-    
-    # Login ekranı CSS
-    st.markdown("""
-    <style>
-    .login-header {
-        text-align: center;
-        padding: 40px 0 30px;
-    }
-    .login-title {
-        font-size: 2.5rem;
-        font-weight: 700;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 10px;
-    }
-    .login-subtitle {
-        color: #666;
-        font-size: 1.1rem;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    # Login header
-    st.markdown("""
-    <div class="login-header">
-        <div style="font-size: 4rem; margin-bottom: 20px;">📦</div>
-        <div class="login-title">OMS Depo Birleştirme Projesi</div>
-        <div class="login-subtitle">Proje Yönetim Sistemi - Token Based</div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    col1, col2, col3 = st.columns([1, 1.5, 1])
-    
+    col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
-        st.markdown("### 🔐 GİRİŞ YAP")
-        st.markdown("---")
-        
-        username = st.text_input("👤 Kullanıcı Adı", placeholder="örn: ertugrul", key="username_input")
-        password = st.text_input("🔑 Şifre", type="password", placeholder="Şifrenizi girin", key="password_input")
-        
-        st.markdown("")
-        
-        col_a, col_b = st.columns(2)
-        
-        with col_a:
-            if st.button("🚀 Giriş Yap", use_container_width=True, type="primary"):
-                if username.lower() in USERS:
-                    password_hash = hashlib.sha256(password.encode()).hexdigest()
-                    if password_hash == USERS[username.lower()]["password"]:
-                        st.session_state.authenticated = True
-                        st.session_state.username = username.lower()
-                        st.session_state.user_info = USERS[username.lower()]
-                        
-                        # Token sistemini başlat
-                        init_token_system()
-                        
-                        st.success(f"✅ Hoş geldiniz, {USERS[username.lower()]['name']}!")
-                        st.info(f"🪙 {USERS[username.lower()]['initial_tokens']} token bakiyeniz bulunmaktadır.")
-                        st.balloons()
-                        st.rerun()
-                    else:
-                        st.error("❌ Hatalı şifre!")
-                else:
-                    st.error("❌ Kullanıcı bulunamadı!")
-        
-        with col_b:
-            if st.button("🔄 Temizle", use_container_width=True):
-                st.rerun()
-        
-        st.markdown("---")
-        st.markdown("#### 👥 Demo Hesaplar")
-        
-        with st.expander("📋 Kullanıcı Listesi"):
-            demo_users = pd.DataFrame([
-                {"👤 Kullanıcı": "ertugrul", "🔑 Şifre": "lojistik2025", "👔 Rol": "Sponsor", "🪙 Token": "100"},
-                {"👤 Kullanıcı": "gokhan", "🔑 Şifre": "ecom2025", "👔 Rol": "Sponsor", "🪙 Token": "100"},
-                {"👤 Kullanıcı": "volkan", "🔑 Şifre": "magaza2025", "👔 Rol": "Manager", "🪙 Token": "100"},
-                {"👤 Kullanıcı": "demo", "🔑 Şifre": "demo2025", "👔 Rol": "Viewer", "🪙 Token": "100"},
-            ])
-            st.dataframe(demo_users, hide_index=True, use_container_width=True)
-        
-        st.markdown("---")
-        st.markdown("##### 💡 Token Sistemi")
-        st.caption("• Her kullanıcıya 100 token verilir")
-        st.caption("• Her giriş 1 token harcar")
-        st.caption("• Aynı gün içinde < 6 saat: Token düşmez ✅")
-        st.caption("• Aynı gün içinde > 6 saat: Token düşer ⚠️")
-        st.caption("• Gece 00:00'da otomatik çıkış yapılır")
-        st.caption("💡 Giriş sorunları için IT'ye başvurun.")
+        if st.button("🏠 Ana Sayfaya Dön", use_container_width=True, type="primary"):
+            st.switch_page("Home.py")
     
-    return False
-
-def logout():
-    """Çıkış yap"""
-    st.session_state.authenticated = False
-    st.session_state.username = None
-    st.session_state.user_info = None
-    st.rerun()
-
-# ==============================================
-# AUTHENTICATION KONTROL
-# ==============================================
-
-if not check_password():
     st.stop()
 
-# Token sistemini başlat
-init_token_system()
+# ==============================================
+# TOKEN KONTROLÜ
+# ==============================================
 
-# Token kontrolü yap
-should_charge = check_token_charge()
+username = st.session_state.user_info["username"]
+module_name = "oms_proje"
+
+should_charge = check_token_charge(username, module_name)
 
 if should_charge:
-    # Token düşür
-    if not charge_token():
-        st.error("❌ Token bakiyeniz tükendi! Lütfen sistem yöneticisi ile iletişime geçin.")
+    success, remaining, message = charge_token(username, module_name)
+    
+    if not success:
+        st.error(f"❌ {message}")
+        st.error("Token bakiyeniz tükendi!")
         st.stop()
     else:
-        remaining = get_token_balance()
+        st.session_state.user_info["remaining_tokens"] = remaining
+        
         if remaining <= 10:
-            st.warning(f"⚠️ Token bakiyeniz azalıyor! Kalan: {remaining} token")
+            st.warning(f"⚠️ Token azalıyor! Kalan: {remaining}")
 
 # ==============================================
-# KULLANICI BİLGİLERİ SIDEBAR
+# SIDEBAR
 # ==============================================
 
 with st.sidebar:
-    # Kullanıcı profil kartı
+    # Kullanıcı profili
     st.markdown(f"""
     <div style='padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                 border-radius: 10px; margin-bottom: 20px; text-align: center;'>
@@ -322,63 +69,23 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
-    # Token widget
-    username = st.session_state.username
-    token_info = st.session_state.token_data[username]
-    remaining = token_info["remaining_tokens"]
-    total = token_info["total_tokens"]
-    used = total - remaining
-    usage_percent = get_token_usage_percent()
-    
-    # Token progress bar rengi
-    if usage_percent < 50:
-        bar_color = "#00ff88"  # Yeşil
-    elif usage_percent < 75:
-        bar_color = "#ffa500"  # Turuncu
-    else:
-        bar_color = "#ff4444"  # Kırmızı
-    
-    st.markdown(f"""
-    <div style='padding: 15px; background: rgba(255,255,255,0.05); border-radius: 10px; margin-bottom: 15px;'>
-        <div style='text-align: center; margin-bottom: 10px;'>
-            <div style='font-size: 0.9rem; color: #999; margin-bottom: 5px;'>🪙 Token Bakiyesi</div>
-            <div style='font-size: 2rem; font-weight: 700; color: {bar_color};'>{remaining}</div>
-            <div style='font-size: 0.8rem; color: #666;'>/ {total} token</div>
-        </div>
-        <div style='background: rgba(255,255,255,0.1); border-radius: 10px; height: 10px; overflow: hidden;'>
-            <div style='background: {bar_color}; height: 100%; width: {100-usage_percent}%; transition: width 0.3s;'></div>
-        </div>
-        <div style='text-align: center; margin-top: 8px; font-size: 0.75rem; color: #888;'>
-            Kullanılan: {used} token (%{usage_percent})
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Token bilgileri
-    st.markdown("##### 📊 Bugünkü Kullanım")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric("Giriş Sayısı", token_info["login_count_today"])
-    with col2:
-        st.metric("Harcanan Token", token_info["tokens_used_today"])
-    
-    if token_info["last_login"]:
-        time_since = datetime.now() - token_info["last_login"]
-        hours = int(time_since.total_seconds() / 3600)
-        minutes = int((time_since.total_seconds() % 3600) / 60)
-        
-        st.caption(f"🕐 Son giriş: {hours}s {minutes}dk önce")
-        
-        if hours < 6:
-            remaining_hours = 6 - hours
-            st.info(f"⏱️ {remaining_hours} saat içinde token düşmeyecek")
+    # Token widget (merkezi)
+    render_token_widget(username)
     
     st.markdown("---")
     
+    # Navigasyon
+    st.markdown("### 🧭 Navigasyon")
+    if st.button("🏠 Ana Sayfa", use_container_width=True):
+        st.switch_page("Home.py")
+    
+    st.markdown("---")
+    
+    # Çıkış
     if st.button("🚪 Çıkış Yap", use_container_width=True):
-        logout()
-    
-    st.markdown("---")
+        st.session_state.authenticated = False
+        st.session_state.user_info = None
+        st.switch_page("Home.py")
 
 # ==============================================
 # ANA UYGULAMA BAŞLANGIÇ
@@ -636,7 +343,7 @@ with tab2:
     """, unsafe_allow_html=True)
     
     # Gantt Chart HTML oluştur
-    max_hafta = 40  # FAZ 3'ü de kapsayacak şekilde 40 haftaya çıkardık
+    max_hafta = 40
     
     gantt_html = '<div class="gantt-container"><table class="gantt-table">'
     
@@ -667,20 +374,15 @@ with tab2:
             
             for h in range(1, max_hafta + 1):
                 if h >= bas_h and h < bas_h + sure:
-                    # Görevin olduğu haftalar
                     if h == bas_h:
-                        # İlk hafta - görev çubuğu başlangıcı
                         colspan = min(sure, max_hafta - h + 1)
                         gantt_html += f'<td colspan="{colspan}">'
                         gantt_html += f'<div class="gantt-task {durum_class}" style="width:100%;">'
                         gantt_html += f'<span class="gorev-info">{gorev["id"]}</span>'
                         gantt_html += '</div></td>'
-                        # Sonraki hücreleri atla
                         for _ in range(1, colspan):
                             continue
-                    # Diğer haftalar zaten colspan ile kapsandı
                 elif h < bas_h or h >= bas_h + sure:
-                    # Görevin olmadığı haftalar - boş hücre
                     if h not in range(bas_h, bas_h + sure):
                         gantt_html += '<td></td>'
             
@@ -688,10 +390,8 @@ with tab2:
     
     gantt_html += '</table></div>'
     
-    # Gantt'ı göster
     st.markdown(gantt_html, unsafe_allow_html=True)
     
-    # Legend
     st.markdown("---")
     st.markdown("### 📌 Durum Göstergeleri")
     col1, col2, col3, col4 = st.columns(4)
@@ -704,11 +404,9 @@ with tab2:
 with tab3:
     st.header("✏️ Görev Düzenleme")
     
-    # Faz seç
     faz_sec = st.selectbox("Faz Seçin", list(fazlar.keys()), key="edit_faz_select")
     
     if faz_sec:
-        # Görev ID'lerini benzersiz tutarak listele
         gorev_options = {}
         for g in fazlar[faz_sec]['gorevler']:
             gorev_options[g['id']] = f"{g['id']} - {g['gorev']}"
@@ -722,7 +420,6 @@ with tab3:
             )
             
             if gorev_sec_id:
-                # ID'ye göre görevi bul
                 gorev = next((g for g in fazlar[faz_sec]['gorevler'] if g['id'] == gorev_sec_id), None)
                 
                 if gorev:
@@ -757,7 +454,6 @@ with tab3:
                         sil = col2.form_submit_button("🗑️ Sil", use_container_width=True)
                         
                         if kaydet:
-                            # ID'ye göre index bul
                             idx = next((i for i, g in enumerate(fazlar[faz_sec]['gorevler']) if g['id'] == gorev_sec_id), None)
                             
                             if idx is not None:
@@ -775,7 +471,6 @@ with tab3:
                                 st.rerun()
                         
                         if sil:
-                            # ID'ye göre sil
                             st.session_state.proje_verileri[faz_sec]['gorevler'] = [
                                 g for g in fazlar[faz_sec]['gorevler'] if g['id'] != gorev_sec_id
                             ]
@@ -811,10 +506,9 @@ with tab4:
             
             if st.form_submit_button("➕ Görevi Ekle", use_container_width=True):
                 if yeni_id and yeni_gorev:
-                    # ID benzersizliğini kontrol et
                     mevcut_idler = [g['id'] for g in fazlar[hedef]['gorevler']]
                     if yeni_id in mevcut_idler:
-                        st.error(f"⚠️ {yeni_id} ID'si zaten kullanılıyor! Farklı bir ID seçin.")
+                        st.error(f"⚠️ {yeni_id} ID'si zaten kullanılıyor!")
                     else:
                         st.session_state.proje_verileri[hedef]['gorevler'].append({
                             'id': yeni_id,
@@ -831,11 +525,11 @@ with tab4:
                 else:
                     st.error("⚠️ Görev ID ve Görev Adı zorunludur!")
     
-    else:  # Yeni Faz
+    else:
         st.subheader("Yeni Faz Ekle")
         
         with st.form("yeni_faz"):
-            faz_adi = st.text_input("Faz Adı", placeholder="Örn: FAZ 3: YAYINLAMA")
+            faz_adi = st.text_input("Faz Adı", placeholder="Örn: FAZ 4: YAYINLAMA")
             
             col1, col2, col3 = st.columns(3)
             with col1:
@@ -871,7 +565,6 @@ with tab5:
     with col1:
         st.subheader("📤 Dışa Aktar")
         
-        # JSON
         json_data = json.dumps(st.session_state.proje_verileri, ensure_ascii=False, indent=2)
         st.download_button(
             "📥 JSON olarak İndir",
@@ -881,7 +574,6 @@ with tab5:
             use_container_width=True
         )
         
-        # CSV
         tum_gorevler = []
         for faz_adi, faz in fazlar.items():
             for g in faz['gorevler']:
@@ -922,4 +614,4 @@ with tab5:
         st.rerun()
 
 st.markdown("---")
-st.caption(f"📦 Depo Birleştirme Projesi | Thorius AR4U | Hakan | {datetime.now().strftime('%d.%m.%Y %H:%M')}")
+st.caption(f"📦 Depo Birleştirme Projesi | Thorius AR4U | {datetime.now().strftime('%d.%m.%Y %H:%M')}")
