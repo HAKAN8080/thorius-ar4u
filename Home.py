@@ -69,7 +69,7 @@ def check_password():
     <div class="login-header">
         <div class="login-logo">📊</div>
         <div class="login-title">Thorius AR4U</div>
-        <div class="login-subtitle">Retail Analytics Platform</div>
+       . <div class="login-subtitle">Retail Analytics Platform</div>
     </div>
     """, unsafe_allow_html=True)
     
@@ -105,11 +105,7 @@ def check_password():
         
         st.markdown("---")
         
-        with st.expander("📋 Demo Hesaplar"):
-            st.caption("**Sponsor:** ertugrul / lojistik2025")
-            st.caption("**Manager:** volkan / magaza2025")
-            st.caption("**Demo:** demo / demo2025")
-    
+        
     return False
 
 # Authentication kontrolü
