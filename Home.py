@@ -165,16 +165,15 @@ with st.sidebar:
         st.session_state.user_info = None
         st.rerun()
 
-# Ana sayfa içeriği - KÜÇÜLTÜLMÜŞ BAŞLIK
+# Ana sayfa içeriği - KOMPAKT BAŞLIK (2 SATIR)
 st.markdown("""
-<div style='text-align: center; padding: 20px 0 10px 0;'>
-    <div style='font-size: 2.5rem; margin-bottom: 10px;'>📊</div>
-    <h1 style='font-size: 2rem; font-weight: 700; margin: 10px 0;
+<div style='text-align: center; padding: 10px 0 5px 0;'>
+    <h1 style='font-size: 1.5rem; font-weight: 700; margin: 0; line-height: 1.2;
                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>
-        THORIUS AR4U
+        📊 THORIUS AR4U
     </h1>
-    <p style='font-size: 1rem; color: #666; margin: 5px 0;'>
+    <p style='font-size: 0.85rem; color: #666; margin: 2px 0 0 0;'>
         Retail Analytics & Resource 4 U
     </p>
 </div>
