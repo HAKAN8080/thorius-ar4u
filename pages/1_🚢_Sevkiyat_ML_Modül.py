@@ -115,16 +115,70 @@ with st.sidebar:
     
     st.divider()
     
-    # Module Info
-    st.markdown("### 📊 Modül Bilgisi")
-    st.info("""
-    **EVE Sevkiyat Planlama**
+    # Module Info with LIVE Badge
+    st.markdown("""
+    <style>
+    @keyframes pulse {
+        0% {
+            opacity: 1;
+            transform: scale(1);
+        }
+        50% {
+            opacity: 0.6;
+            transform: scale(1.05);
+        }
+        100% {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
     
-    ✅ Matris tabanlı optimizasyon
-    ✅ Cover analizi
-    ✅ Alım ihtiyacı hesaplama
-    ✅ Detaylı raporlama
-    """)
+    .live-badge {
+        display: inline-block;
+        background: #ff4444;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        margin-left: 8px;
+        animation: pulse 2s ease-in-out infinite;
+        box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+    }
+    
+    .live-dot {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        background: white;
+        border-radius: 50%;
+        margin-right: 5px;
+        animation: pulse 2s ease-in-out infinite;
+    }
+    </style>
+    
+    <div style='background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
+                padding: 16px; border-radius: 12px; margin-bottom: 20px;
+                border: 1px solid rgba(102, 126, 234, 0.2);'>
+        <div style='font-weight: 700; font-size: 1.05rem; margin-bottom: 10px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>
+            🚢 Sevkiyat ML Modül
+            <span class='live-badge'>
+                <span class='live-dot'></span>LIVE
+            </span>
+        </div>
+        <div style='color: #495057; font-size: 0.85rem; margin-bottom: 8px;'>
+            <strong>EVE Sevkiyat Planlama Sistemi</strong>
+        </div>
+        <div style='color: #6c757d; font-size: 0.8rem; line-height: 1.6;'>
+            ✅ Matris tabanlı optimizasyon<br>
+            ✅ Cover analizi<br>
+            ✅ Alım ihtiyacı hesaplama<br>
+            💰 <strong>Token:</strong> 10/kullanım (günlük)
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     
     st.divider()
     
