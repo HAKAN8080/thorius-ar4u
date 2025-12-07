@@ -1443,6 +1443,16 @@ with main_tabs[2]:
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True
             )
+# ==============================================
+# SIDEBAR - ÇIKIŞ BUTONU
+# ==============================================
+
+with st.sidebar:
+    st.markdown("---")
+    if st.button("🚪 Çıkış Yap", use_container_width=True):
+        st.session_state.authenticated = False
+        st.session_state.user_info = None
+        st.switch_page("Home.py")
 
 # Footer
 st.markdown("---")
