@@ -29,8 +29,14 @@ user_name = user_info.get('name', 'Kullanıcı')
 user_title = user_info.get('title', '')
 user_role = user_info.get('role', 'viewer')
 
+# Platform Admin kontrolü
+is_platform_admin = user_title == "Platform Admin"
+
 # ==================== HEADER ====================
-st.title(f"👤 {user_name} - Kullanıcı Paneli")
+if is_platform_admin:
+    st.title(f"👤 {user_name} - Kullanıcı Paneli (Platform Admin)")
+else:
+    st.title(f"👤 {user_name} - Kullanıcı Paneli")
 st.markdown("---")
 
 # ==================== FUNCTIONS ====================
@@ -150,8 +156,58 @@ def get_weekly_stats(username):
     conn.close()
     return df
 
+def create_new_user(username, password, name, title, role, initial_tokens=100):
+    """Yeni kullanıcı oluştur (sadece Platform Admin)"""
+    conn = sqlite3.connect('thorius_tokens.db', check_same_thread=False)
+    c = conn.cursor()
+    
+    # Kullanıcı zaten var mı kontrol et
+    c.execute('SELECT username FROM users WHERE username = ?', (username,))
+    if c.fetchone():
+        conn.close()
+        return False, f"❌ '{username}' kullanıcı adı zaten kullanılıyor!"
+    
+    # Şifreyi hash'le
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
+    
+    try:
+        # Kullanıcıyı ekle
+        c.execute('''
+            INSERT INTO users (username, password_hash, name, title, role, total_tokens, remaining_tokens)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (username, password_hash, name, title, role, initial_tokens, initial_tokens))
+        
+        conn.commit()
+        conn.close()
+        return True, f"✅ '{username}' kullanıcısı başarıyla oluşturuldu!"
+    except Exception as e:
+        conn.close()
+        return False, f"❌ Hata: {str(e)}"
+
+def get_all_users_list():
+    """Tüm kullanıcıları listele (Platform Admin)"""
+    conn = sqlite3.connect('thorius_tokens.db', check_same_thread=False)
+    
+    df = pd.read_sql_query('''
+        SELECT 
+            username,
+            name,
+            title,
+            role,
+            remaining_tokens,
+            total_tokens
+        FROM users
+        ORDER BY name
+    ''', conn)
+    
+    conn.close()
+    return df
+
 # ==================== TABS ====================
-tab1, tab2, tab3, tab4 = st.tabs(["📊 Özet", "🔐 Şifre Değiştir", "📈 İstatistikler", "📋 Geçmiş"])
+if is_platform_admin:
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Özet", "🔐 Şifre Değiştir", "📈 İstatistikler", "📋 Geçmiş", "➕ Kullanıcı Ekle"])
+else:
+    tab1, tab2, tab3, tab4 = st.tabs(["📊 Özet", "🔐 Şifre Değiştir", "📈 İstatistikler", "📋 Geçmiş"])
 
 # ==================== TAB 1: ÖZET ====================
 with tab1:
@@ -342,6 +398,119 @@ with tab4:
                     st.metric(module, f"{int(tokens)} token")
     else:
         st.info("📋 Henüz token kullanım geçmişiniz yok.")
+
+# ==================== TAB 5: KULLANICI EKLE (Sadece Platform Admin) ====================
+if is_platform_admin:
+    with tab5:
+        st.subheader("➕ Yeni Kullanıcı Ekle")
+        
+        st.warning("⚠️ Bu sekme sadece **Platform Admin** kullanıcıları için görünür.")
+        
+        # Mevcut kullanıcıları göster
+        with st.expander("👥 Mevcut Kullanıcılar", expanded=False):
+            df_all_users = get_all_users_list()
+            st.dataframe(
+                df_all_users,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "username": "Kullanıcı Adı",
+                    "name": "İsim",
+                    "title": "Ünvan",
+                    "role": "Rol",
+                    "remaining_tokens": st.column_config.NumberColumn("Kalan Token", format="%d"),
+                    "total_tokens": st.column_config.NumberColumn("Toplam Token", format="%d")
+                }
+            )
+        
+        st.markdown("---")
+        
+        # Kullanıcı ekleme formu
+        with st.form("add_user_form"):
+            st.markdown("### 📝 Kullanıcı Bilgileri")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                new_username = st.text_input(
+                    "Kullanıcı Adı *", 
+                    placeholder="ornek_kullanici",
+                    help="Küçük harf, rakam, alt çizgi kullanabilirsiniz"
+                )
+                new_name = st.text_input(
+                    "İsim Soyisim *",
+                    placeholder="Ahmet Yılmaz"
+                )
+                new_title = st.text_input(
+                    "Ünvan *",
+                    placeholder="Satış Müdürü"
+                )
+            
+            with col2:
+                new_password = st.text_input(
+                    "Şifre *",
+                    type="password",
+                    help="En az 6 karakter"
+                )
+                new_role = st.selectbox(
+                    "Rol *",
+                    options=["viewer", "user", "manager", "sponsor", "admin"],
+                    index=0,
+                    help="viewer: Sadece görüntüleme | user: Temel işlemler | manager: Yönetici | sponsor: Sponsor | admin: Admin"
+                )
+                new_tokens = st.number_input(
+                    "Başlangıç Token Miktarı",
+                    min_value=0,
+                    max_value=1000,
+                    value=100,
+                    step=10
+                )
+            
+            st.markdown("---")
+            
+            submitted = st.form_submit_button("➕ Kullanıcı Oluştur", type="primary", use_container_width=True)
+            
+            if submitted:
+                # Validasyon
+                if not new_username or not new_name or not new_title or not new_password:
+                    st.error("❌ Tüm alanları doldurun!")
+                elif len(new_username) < 3:
+                    st.error("❌ Kullanıcı adı en az 3 karakter olmalı!")
+                elif len(new_password) < 6:
+                    st.error("❌ Şifre en az 6 karakter olmalı!")
+                elif not new_username.replace('_', '').replace('.', '').isalnum():
+                    st.error("❌ Kullanıcı adı sadece harf, rakam, alt çizgi ve nokta içerebilir!")
+                else:
+                    # Kullanıcıyı oluştur
+                    success, message = create_new_user(
+                        username=new_username.lower(),
+                        password=new_password,
+                        name=new_name,
+                        title=new_title,
+                        role=new_role,
+                        initial_tokens=new_tokens
+                    )
+                    
+                    if success:
+                        st.success(message)
+                        st.balloons()
+                        
+                        # Özet bilgi göster
+                        st.info(f"""
+                        **Oluşturulan Kullanıcı:**
+                        - 👤 Kullanıcı Adı: `{new_username.lower()}`
+                        - 🔐 Şifre: `{new_password}`
+                        - 📛 İsim: {new_name}
+                        - 💼 Ünvan: {new_title}
+                        - 🎭 Rol: {new_role}
+                        - 💰 Token: {new_tokens}
+                        
+                        ⚠️ **Bu bilgileri güvenli bir yerde saklayın!**
+                        """)
+                        
+                        st.info("💡 Kullanıcı artık giriş yapabilir.")
+                    else:
+                        st.error(message)
 
 # ==================== FOOTER ====================
 st.markdown("---")
