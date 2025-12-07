@@ -12,8 +12,16 @@ import os
 import sys
 
 # ==================== TOKEN MANAGER IMPORT ====================
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from token_manager import check_token_and_charge, render_token_widget
+# Add parent directory to path for token_manager import
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+try:
+    from token_manager import check_token_and_charge, render_token_widget
+except ImportError:
+    st.error("❌ Token manager yüklenemedi! Lütfen token_manager.py dosyasının root klasörde olduğundan emin olun.")
+    st.stop()
 
 # ==================== AUTHENTICATION & TOKEN CONTROL ====================
 
@@ -1557,25 +1565,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
