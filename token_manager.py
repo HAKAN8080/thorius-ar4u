@@ -68,6 +68,7 @@ def create_default_users():
     c = conn.cursor()
     
     users = [
+        ("hakan", "hakan.1923", "Hakan Bey", "Platform Admin", "admin"),
         ("ertugrul", "lojistik2025", "Ertuğrul Bey", "Lojistik GMY", "sponsor"),
         ("gokhan", "ecom2025", "Gökhan Bey", "ECOM GMY", "sponsor"),
         ("volkan", "magaza2025", "Volkan Bey", "Mağazacılık GMY", "manager"),
@@ -449,3 +450,49 @@ if __name__ == "__main__":
     for user in c.fetchall():
         print(f"   {user[0]}: {user[1]} - {user[2]} token")
     conn.close()
+
+def add_tokens_to_user(username, amount):
+    """Kullanıcıya token ekle"""
+    conn = sqlite3.connect('thorius_tokens.db', check_same_thread=False)
+    c = conn.cursor()
+    
+    # Mevcut bakiyeyi al
+    c.execute('SELECT remaining_tokens FROM users WHERE username = ?', (username,))
+    result = c.fetchone()
+    
+    if not result:
+        conn.close()
+        return False, 0, "Kullanıcı bulunamadı"
+    
+    current = result[0]
+    new_balance = current + amount
+    
+    # Token ekle
+    c.execute('''
+        UPDATE users 
+        SET remaining_tokens = ?,
+            total_tokens = total_tokens + ?
+        WHERE username = ?
+    ''', (new_balance, amount, username))
+    
+    # İşlemi kaydet
+    c.execute('''
+        INSERT INTO token_transactions (username, module, token_cost, remaining_after, session_id)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (username, 'ADMIN_ADD', -amount, new_balance, 'admin_refill'))
+    
+    conn.commit()
+    conn.close()
+    
+    return True, new_balance, f"{amount} token eklendi"
+
+if __name__ == "__main__":
+    # Demo kullanıcısına 100 token ekle
+    print("\n🔄 Demo kullanıcısına 100 token ekleniyor...")
+    success, balance, message = add_tokens_to_user('demo', 100)
+    
+    if success:
+        print(f"✅ {message}")
+        print(f"💰 Yeni bakiye: {balance} token")
+    else:
+        print(f"❌ {message}")
