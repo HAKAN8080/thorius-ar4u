@@ -165,16 +165,16 @@ with st.sidebar:
         st.session_state.user_info = None
         st.rerun()
 
-# Ana sayfa içeriği
+# Ana sayfa içeriği - KÜÇÜLTÜLMÜŞ BAŞLIK
 st.markdown("""
-<div style='text-align: center; padding: 40px 0;'>
-    <div style='font-size: 4rem; margin-bottom: 20px;'>📊</div>
-    <h1 style='font-size: 3rem; font-weight: 700; 
+<div style='text-align: center; padding: 20px 0 10px 0;'>
+    <div style='font-size: 2.5rem; margin-bottom: 10px;'>📊</div>
+    <h1 style='font-size: 2rem; font-weight: 700; margin: 10px 0;
                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>
-        Thorius AR4U
+        THORIUS AR4U
     </h1>
-    <p style='font-size: 1.3rem; color: #666; margin-top: 20px;'>
+    <p style='font-size: 1rem; color: #666; margin: 5px 0;'>
         Retail Analytics & Resource 4 U
     </p>
 </div>
@@ -182,17 +182,20 @@ st.markdown("""
 
 st.markdown("---")
 
-# Modül kategorileri
+# Modül kategorileri - KÜÇÜLTÜLMÜŞ VE LACİVERT
 col1, col2, col3 = st.columns(3)
 
 with col1:
     st.markdown("""
-    <div style='padding: 30px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); 
-                border-radius: 15px; text-align: center; color: white;'>
-        <div style='font-size: 3rem; margin-bottom: 15px;'>🔵</div>
-        <h2 style='color: white; margin-bottom: 10px;'>IN-SEASON</h2>
-        <p style='color: rgba(255,255,255,0.9); font-size: 0.95rem;'>7 Aktif Modül</p>
-        <p style='color: rgba(255,255,255,0.8); font-size: 0.85rem; margin-top: 10px;'>
+    <div style='padding: 25px; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); 
+                border-radius: 15px; text-align: center; color: white; height: 280px;
+                display: flex; flex-direction: column; justify-content: space-between;'>
+        <div>
+            <div style='font-size: 2.5rem; margin-bottom: 10px;'>🔵</div>
+            <h2 style='color: white; margin-bottom: 10px; font-size: 1.5rem;'>IN-SEASON</h2>
+            <p style='color: rgba(255,255,255,0.9); font-size: 1rem; margin-bottom: 10px;'>7 Aktif Modül</p>
+        </div>
+        <p style='color: rgba(255,255,255,0.8); font-size: 0.85rem;'>
             Sevkiyat, PO, WSSI, Transfer, Kapasite, Fiyatlandırma, Clustering
         </p>
     </div>
@@ -200,12 +203,15 @@ with col1:
 
 with col2:
     st.markdown("""
-    <div style='padding: 30px; background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); 
-                border-radius: 15px; text-align: center; color: white;'>
-        <div style='font-size: 3rem; margin-bottom: 15px;'>🔴</div>
-        <h2 style='color: white; margin-bottom: 10px;'>PRE-SEASON</h2>
-        <p style='color: rgba(255,255,255,0.9); font-size: 0.95rem;'>3 Aktif Modül</p>
-        <p style='color: rgba(255,255,255,0.8); font-size: 0.85rem; margin-top: 10px;'>
+    <div style='padding: 25px; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); 
+                border-radius: 15px; text-align: center; color: white; height: 280px;
+                display: flex; flex-direction: column; justify-content: space-between;'>
+        <div>
+            <div style='font-size: 2.5rem; margin-bottom: 10px;'>🔴</div>
+            <h2 style='color: white; margin-bottom: 10px; font-size: 1.5rem;'>PRE-SEASON</h2>
+            <p style='color: rgba(255,255,255,0.9); font-size: 1rem; margin-bottom: 10px;'>3 Aktif Modül</p>
+        </div>
+        <p style='color: rgba(255,255,255,0.8); font-size: 0.85rem;'>
             Bütçe Forecast, Model Bütçe, Tedarik Zinciri Kokpit
         </p>
     </div>
@@ -213,12 +219,15 @@ with col2:
 
 with col3:
     st.markdown("""
-    <div style='padding: 30px; background: linear-gradient(135deg, #fccb90 0%, #d57eeb 100%); 
-                border-radius: 15px; text-align: center; color: white;'>
-        <div style='font-size: 3rem; margin-bottom: 15px;'>🟡</div>
-        <h2 style='color: white; margin-bottom: 10px;'>PROJE YÖNETİMİ</h2>
-        <p style='color: rgba(255,255,255,0.9); font-size: 0.95rem;'>1 Aktif Modül</p>
-        <p style='color: rgba(255,255,255,0.8); font-size: 0.85rem; margin-top: 10px;'>
+    <div style='padding: 25px; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); 
+                border-radius: 15px; text-align: center; color: white; height: 280px;
+                display: flex; flex-direction: column; justify-content: space-between;'>
+        <div>
+            <div style='font-size: 2.5rem; margin-bottom: 10px;'>🟡</div>
+            <h2 style='color: white; margin-bottom: 10px; font-size: 1.5rem;'>PROJE YÖNETİMİ</h2>
+            <p style='color: rgba(255,255,255,0.9); font-size: 1rem; margin-bottom: 10px;'>1 Aktif Modül</p>
+        </div>
+        <p style='color: rgba(255,255,255,0.8); font-size: 0.85rem;'>
             OMS Depo Birleştirme Projesi
         </p>
     </div>
