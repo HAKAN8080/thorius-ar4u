@@ -20,12 +20,16 @@ if 'authenticated' not in st.session_state or not st.session_state.authenticated
     st.warning("⚠️ Lutfen giris yapin!")
     st.stop()
 
-# Admin kontrolü - Sadece hakan kullanıcısı görebilir
-current_user = st.session_state.get('user_info', {}).get('username', '')
-if current_user.lower() != 'hakan':
+# Admin kontrolü - Sadece Platform Admin görebilir
+user_info = st.session_state.get('user_info', {})
+current_user = user_info.get('username', '')
+current_title = user_info.get('title', '')
+
+# Platform Admin kontrolü
+if current_title != 'Platform Admin':
     st.error("❌ Bu sayfaya erişim yetkiniz yok!")
-    st.info("💡 Bu sayfa sadece admin kullanıcıları içindir.")
-    st.info(f"🔍 Debug: Giriş yapan kullanıcı = '{current_user}'")
+    st.info("💡 Bu sayfa sadece **Platform Admin** kullanıcıları içindir.")
+    st.info(f"🔍 Giriş yapan: '{current_user}' - Ünvan: '{current_title}'")
     st.stop()
 
 # ==================== HEADER ====================
