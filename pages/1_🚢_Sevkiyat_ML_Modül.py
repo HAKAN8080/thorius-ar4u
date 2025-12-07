@@ -17,9 +17,9 @@ import os
 
 # Try multiple paths to find token_manager
 possible_paths = [
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),  # Parent directory
-    os.getcwd(),  # Current working directory
-    os.path.dirname(os.getcwd()),  # Parent of working directory
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    os.getcwd(),
+    os.path.dirname(os.getcwd()),
 ]
 
 for path in possible_paths:
@@ -27,7 +27,7 @@ for path in possible_paths:
         sys.path.insert(0, path)
 
 try:
-    from token_manager import check_token_and_charge, render_token_widget
+    from token_manager import check_token_charge, charge_token, render_token_widget, get_token_balance
 except ImportError as e:
     st.error(f"❌ Token manager yüklenemedi! Hata: {str(e)}")
     st.info(f"Aranan yollar: {possible_paths}")
@@ -40,14 +40,25 @@ if 'authenticated' not in st.session_state or not st.session_state.authenticated
     st.warning("⚠️ Lütfen giriş yapın!")
     st.stop()
 
+# Get username from session
+username = st.session_state.get('username', 'demo')
+
 # Token kontrolü (10 token)
 module_name = "sevkiyat_ml"
 required_tokens = 10
 
-if not check_token_and_charge(module_name, required_tokens):
-    st.error(f"❌ Bu modül için {required_tokens} token gerekiyor!")
+# Token kontrolü yap
+can_access = check_token_charge(username, module_name)
+
+if not can_access:
+    remaining = get_token_balance(username)
+    st.error(f"❌ Yetersiz token! Bu modül için {required_tokens} token gerekiyor.")
+    st.info(f"💰 Kalan token: {remaining}")
     st.info("💡 Ana sayfaya dönüp token satın alabilirsiniz")
     st.stop()
+
+# Token'ı kes
+charge_token(username, module_name)
 
 # ==================== ORIGINAL CODE STARTS HERE ====================
 
@@ -69,7 +80,7 @@ with st.sidebar:
     """, unsafe_allow_html=True)
     
     # Token Widget
-    render_token_widget()
+    render_token_widget(username)
     
     st.divider()
     
