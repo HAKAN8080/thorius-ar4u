@@ -859,24 +859,31 @@ with main_tabs[0]:
                 general_growth = 0.10  # %10
                 
                 # Tahmin
-                # DEBUG: Değişkenleri kontrol et
-                print(f"DEBUG: organic_growth_rate = {organic_growth_rate}")
-                print(f"DEBUG: budget_version = {budget_version}")
-
-                full_data = forecaster.get_full_data_with_forecast(
-                    growth_param=general_growth,
-                    margin_improvement=margin_improvement,
-                    stock_change_pct=stock_change_pct,
-                    monthly_growth_targets=monthly_growth_targets,
-                    maingroup_growth_targets=maingroup_growth_targets,
-                    lessons_learned=lessons_learned_dict,
-                    inflation_adjustment=inflation_adjustment,
-                    organic_multiplier=organic_multiplier,
-                    price_change_matrix=price_change_dict,
-                    inflation_rate=inflation_future / 100,
-                    organic_growth_rate=organic_growth_rate
-                )
-                
+                try:
+                    print(f"DEBUG 1: Değişkenler kontrol ediliyor...")
+                    print(f"DEBUG 2: organic_growth_rate = {organic_growth_rate}")
+                    print(f"DEBUG 3: budget_version = {budget_version}")
+                    
+                    full_data = forecaster.get_full_data_with_forecast(
+                        growth_param=general_growth,
+                        margin_improvement=margin_improvement,
+                        stock_change_pct=stock_change_pct,
+                        monthly_growth_targets=monthly_growth_targets,
+                        maingroup_growth_targets=maingroup_growth_targets,
+                        lessons_learned=lessons_learned_dict,
+                        inflation_adjustment=inflation_adjustment,
+                        organic_multiplier=organic_multiplier,
+                        price_change_matrix=price_change_dict,
+                        inflation_rate=inflation_future / 100,
+                        organic_growth_rate=organic_growth_rate
+                    )
+                    
+                except Exception as e:
+                    st.error(f"🔴 HATA DETAYI: {str(e)}")
+                    st.error(f"Hata tipi: {type(e).__name__}")
+                    import traceback
+                    st.code(traceback.format_exc())
+                    st.stop()
                 # *** SIFIRLAMA UYGULA ***
                 for month in zero_months:
                     full_data.loc[(full_data['Year'] == 2026) & (full_data['Month'] == month),
