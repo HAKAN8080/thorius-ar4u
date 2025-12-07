@@ -2,7 +2,14 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 import json
-import hashlib
+
+# Merkezi token sistemini import et
+from token_manager import (
+    check_token_charge,
+    charge_token,
+    render_token_widget,
+    get_token_balance
+)
 
 st.set_page_config(page_title="Depo Birleştirme - Proje Yönetimi", layout="wide", page_icon="📦")
 
