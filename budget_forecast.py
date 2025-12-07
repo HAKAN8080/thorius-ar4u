@@ -181,10 +181,10 @@ class BudgetForecaster:
         return seasonality[['MainGroup', 'Month', 'SeasonalityIndex']]
     
     def forecast_future_months(self, num_months=15, growth_param=0.1, margin_improvement=0.0, 
-                              stock_change_pct=0.0, monthly_growth_targets=None, 
-                              maingroup_growth_targets=None, lessons_learned=None,
-                              inflation_adjustment=1.0, organic_multiplier=0.5,
-                              price_change_matrix=None, inflation_rate=0.25):
+                          stock_change_pct=0.0, monthly_growth_targets=None, 
+                          maingroup_growth_targets=None, lessons_learned=None,
+                          inflation_adjustment=1.0, organic_multiplier=0.5,
+                          price_change_matrix=None, inflation_rate=0.25, organic_growth_rate=0.15):  # ← EKLE!
         """
         Son gerçekleşen aydan itibaren belirtilen sayıda ay tahmin et
         
