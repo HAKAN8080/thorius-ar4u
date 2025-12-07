@@ -49,11 +49,12 @@ def init_database():
     # Son giriş tablosu (6 saat kuralı için)
     c.execute('''
         CREATE TABLE IF NOT EXISTS last_logins (
-            username TEXT PRIMARY KEY,
+            username TEXT NOT NULL,
             module TEXT NOT NULL,
             last_login TIMESTAMP NOT NULL,
             last_login_date DATE NOT NULL,
             login_count_today INTEGER DEFAULT 0,
+            PRIMARY KEY (username, module),
             FOREIGN KEY (username) REFERENCES users(username)
         )
     ''')
@@ -144,21 +145,19 @@ def authenticate_user(username, password):
 def check_token_charge(username, module):
     """
     Token düşüp düşmeyeceğini kontrol et
-    6 saat kuralı:
-    - İlk giriş → token düşer
-    - Aynı gün < 6 saat → token düşmez
-    - Aynı gün > 6 saat → token düşer
-    - Yeni gün → token düşer
+    BASIT KURAL: Günde 1 token per modül
+    - İlk giriş bugün → token düşer
+    - Aynı gün 2. giriş → token düşmez
+    - Yeni gün → yeni token düşer
     """
     conn = sqlite3.connect('thorius_tokens.db', check_same_thread=False)
     c = conn.cursor()
     
-    now = datetime.now()
-    today = now.date()
+    today = datetime.now().date()
     
-    # Son giriş bilgisini al
+    # Bugün bu modüle giriş yapılmış mı?
     c.execute('''
-        SELECT last_login, last_login_date
+        SELECT last_login_date
         FROM last_logins
         WHERE username = ? AND module = ?
     ''', (username, module))
@@ -166,21 +165,17 @@ def check_token_charge(username, module):
     result = c.fetchone()
     conn.close()
     
-    # İlk giriş
+    # Hiç giriş yapılmamış
     if not result:
         return True
     
-    last_login = datetime.fromisoformat(result[0])
-    last_date = datetime.fromisoformat(result[1]).date()
+    last_date = datetime.fromisoformat(result[0]).date()
     
-    # Yeni gün mü?
+    # Bugün ilk giriş mi?
     if last_date != today:
-        return True
-    
-    # Aynı gün - 6 saat kontrolü
-    hours_diff = (now - last_login).total_seconds() / 3600
-    
-    return hours_diff >= 6
+        return True  # Yeni gün, token düşer
+    else:
+        return False  # Bugün zaten girilmiş, token düşmez
 
 def charge_token(username, module, session_id=None):
     """
@@ -230,8 +225,7 @@ def charge_token(username, module, session_id=None):
     c.execute('''
         INSERT INTO last_logins (username, module, last_login, last_login_date, login_count_today)
         VALUES (?, ?, ?, ?, 1)
-        ON CONFLICT(username) DO UPDATE SET
-            module = excluded.module,
+        ON CONFLICT(username, module) DO UPDATE SET
             last_login = excluded.last_login,
             last_login_date = excluded.last_login_date,
             login_count_today = CASE 
