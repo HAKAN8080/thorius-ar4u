@@ -475,10 +475,11 @@ class BudgetForecaster:
         return all_forecasts
     
     def get_full_data_with_forecast(self, num_months=15, growth_param=0.1, margin_improvement=0.0, 
-                                    stock_change_pct=0.0, monthly_growth_targets=None, 
-                                    maingroup_growth_targets=None, lessons_learned=None,
-                                    inflation_adjustment=1.0, organic_multiplier=0.5,
-                                    price_change_matrix=None, inflation_rate=0.25):
+                                stock_change_pct=0.0, monthly_growth_targets=None, 
+                                maingroup_growth_targets=None, lessons_learned=None,
+                                inflation_adjustment=1.0, organic_multiplier=0.5,
+                                price_change_matrix=None, inflation_rate=0.25, organic_growth_rate=0.15):  # ← EKLE!
+                                    
         """Gerçekleşen veri + gelecek tahminlerini birleştir"""
         
         # Gelecek tahminini yap
@@ -493,7 +494,8 @@ class BudgetForecaster:
             inflation_adjustment=inflation_adjustment,
             organic_multiplier=organic_multiplier,
             price_change_matrix=price_change_matrix,
-            inflation_rate=inflation_rate
+            inflation_rate=inflation_rate,
+            organic_growth_rate=organic_growth_rate  # ← EKLE!
         )
         
         # Gerçekleşen veriyi düzenle - TAHMİN EDİLEN AYLARI ÇIKAR
