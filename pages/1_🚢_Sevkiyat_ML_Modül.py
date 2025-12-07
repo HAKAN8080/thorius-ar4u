@@ -66,16 +66,21 @@ charge_token(username, module_name)
 # ==================== SIDEBAR (BEFORE set_page_config) ====================
 
 with st.sidebar:
-    # User Profile Card
+    # User Profile Card (Basit versiyon)
     user_info = st.session_state.get('user_info', {})
     user_name = user_info.get('name', 'Kullanıcı')
     user_email = user_info.get('email', 'user@example.com')
     
     st.markdown(f"""
-    <div style="padding: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                border-radius: 10px; margin-bottom: 1rem; color: white;">
-        <div style="font-size: 1.1rem; font-weight: bold;">👤 {user_name}</div>
-        <div style="font-size: 0.8rem; opacity: 0.9;">{user_email}</div>
+    <div style="padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                border-radius: 10px; margin-bottom: 15px; color: white;">
+        <div style="display: flex; align-items: center;">
+            <div style="font-size: 2rem; margin-right: 10px;">👤</div>
+            <div>
+                <div style="font-size: 1rem; font-weight: 600;">{user_name}</div>
+                <div style="font-size: 0.8rem; opacity: 0.9;">{user_email}</div>
+            </div>
+        </div>
     </div>
     """, unsafe_allow_html=True)
     
