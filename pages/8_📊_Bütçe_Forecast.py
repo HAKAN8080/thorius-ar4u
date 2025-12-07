@@ -309,7 +309,7 @@ if uploaded_file is not None:
     current_file_name = uploaded_file.name
     
     if 'last_uploaded_file' not in st.session_state or st.session_state.last_uploaded_file != current_file_name:
-        keys_to_clear = [k for k in st.session_state.keys() if k not in ['last_uploaded_file']]
+        keys_to_clear = [k for k in st.session_state.keys() if k not in ['last_uploaded_file', 'authenticated', 'user_info']]  # ← BURADA DEĞİŞTİR
         for key in keys_to_clear:
             del st.session_state[key]
         
