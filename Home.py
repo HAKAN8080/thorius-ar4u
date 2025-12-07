@@ -67,7 +67,6 @@ def check_password():
     
     st.markdown("""
     <div class="login-header">
-        <div class="login-logo">📊</div>
         <div class="login-title">Thorius AR4U</div>
        . <div class="login-subtitle">Retail Analytics Platform</div>
     </div>
