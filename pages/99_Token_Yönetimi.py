@@ -21,10 +21,11 @@ if 'authenticated' not in st.session_state or not st.session_state.authenticated
     st.stop()
 
 # Admin kontrolü - Sadece hakan kullanıcısı görebilir
-current_user = st.session_state.get('username', '')
+current_user = st.session_state.get('user_info', {}).get('username', '')
 if current_user.lower() != 'hakan':
     st.error("❌ Bu sayfaya erişim yetkiniz yok!")
     st.info("💡 Bu sayfa sadece admin kullanıcıları içindir.")
+    st.info(f"🔍 Debug: Giriş yapan kullanıcı = '{current_user}'")
     st.stop()
 
 # ==================== HEADER ====================
