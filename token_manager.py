@@ -68,14 +68,14 @@ def create_default_users():
     c = conn.cursor()
     
     users = [
-        ("hakan", "hakan.1923", "Hakan Bey", "Platform Admin", "admin"),
-        ("ertugrul", "lojistik2025", "Ertuğrul Bey", "Lojistik GMY", "sponsor"),
-        ("gokhan", "ecom2025", "Gökhan Bey", "ECOM GMY", "sponsor"),
-        ("volkan", "magaza2025", "Volkan Bey", "Mağazacılık GMY", "manager"),
-        ("ferhat", "stok2025", "Ferhat Bey", "Stok Yönetimi Direktörü", "manager"),
-        ("tayfun", "eve2025", "Tayfun Bey", "EVE GM", "manager"),
+        ("hakan", "hakan.1923", "Hakan  ", "Platform Admin", "admin"),
+        ("ertugrul", "lojistik2025", "Ertuğrul  ", "Lojistik GMY", "sponsor"),
+        ("gokhan", "ecom2025", "Gökhan  ", "ECOM GMY", "sponsor"),
+        ("volkan", "magaza2025", "Volkan  ", "Mağazacılık GMY", "manager"),
+        ("ferhat", "stok2025", "Ferhat  ", "Stok Yönetimi Direktörü", "manager"),
+        ("tayfun", "eve2025", "Tayfun  ", "EVE GM", "manager"),
         ("aliakcay", "tzy2025", "Ali Akçay", "EVE TZY Direktörü", "user"),
-        ("ozcan", "it2025", "Özcan Bey", "IT GMY", "admin"),
+        ("ozcan", "it2025", "Özcan  ", "IT GMY", "admin"),
         ("demo", "demo2025", "Demo Kullanıcı", "Misafir", "viewer"),
     ]
     
