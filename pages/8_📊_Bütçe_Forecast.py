@@ -859,6 +859,10 @@ with main_tabs[0]:
                 general_growth = 0.10  # %10
                 
                 # Tahmin
+                # DEBUG: Değişkenleri kontrol et
+                print(f"DEBUG: organic_growth_rate = {organic_growth_rate}")
+                print(f"DEBUG: budget_version = {budget_version}")
+
                 full_data = forecaster.get_full_data_with_forecast(
                     growth_param=general_growth,
                     margin_improvement=margin_improvement,
