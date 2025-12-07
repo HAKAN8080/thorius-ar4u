@@ -10,24 +10,25 @@ import pandas as pd
 
 # Page config
 st.set_page_config(
-    page_title="Token Yönetimi",
+    page_title="Token Yonetimi",
     page_icon="🔐",
     layout="wide"
 )
 
 # ==================== AUTHENTICATION ====================
 if 'authenticated' not in st.session_state or not st.session_state.authenticated:
-    st.warning("⚠️ Lütfen giriş yapın!")
+    st.warning("⚠️ Lutfen giris yapin!")
     st.stop()
 
-# Admin kontrolü (opsiyonel - şimdilik herkes görebilir)
-# user_role = st.session_state.get('user_info', {}).get('role', 'viewer')
-# if user_role.lower() != 'admin':
-#     st.error("❌ Bu sayfaya erişim yetkiniz yok!")
-#     st.stop()
+# Admin kontrolü - Sadece hakan kullanıcısı görebilir
+current_user = st.session_state.get('username', '')
+if current_user.lower() != 'hakan':
+    st.error("❌ Bu sayfaya erişim yetkiniz yok!")
+    st.info("💡 Bu sayfa sadece admin kullanıcıları içindir.")
+    st.stop()
 
 # ==================== HEADER ====================
-st.title("🔐 Token Yönetim Paneli")
+st.title("🔐 Token Yonetim Paneli")
 st.markdown("---")
 
 # ==================== FUNCTIONS ====================
@@ -42,8 +43,7 @@ def get_all_users():
             email,
             role,
             remaining_tokens,
-            total_tokens,
-            created_at
+            total_tokens
         FROM users
         ORDER BY name
     ''', conn)
@@ -178,11 +178,11 @@ def reset_user_tokens(username, amount):
         conn.close()
 
 # ==================== TABS ====================
-tab1, tab2, tab3 = st.tabs(["👥 Kullanıcılar", "📊 İşlem Geçmişi", "⚙️ Toplu İşlemler"])
+tab1, tab2, tab3 = st.tabs(["👥 Kullanicilar", "📊 Islem Gecmisi", "⚙️ Toplu Islemler"])
 
 # ==================== TAB 1: KULLANICILAR ====================
 with tab1:
-    st.subheader("👥 Kullanıcı Token Yönetimi")
+    st.subheader("👥 Kullanici Token Yonetimi")
     
     # Kullanıcıları getir
     df_users = get_all_users()
