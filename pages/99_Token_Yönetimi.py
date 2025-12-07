@@ -41,7 +41,7 @@ def get_all_users():
         SELECT 
             username,
             name,
-            email,
+            title,
             role,
             remaining_tokens,
             total_tokens
@@ -191,7 +191,7 @@ with tab1:
     # Filtreleme
     col1, col2 = st.columns([3, 1])
     with col1:
-        search = st.text_input("🔍 Kullanıcı Ara", placeholder="İsim veya email...")
+        search = st.text_input("🔍 Kullanıcı Ara", placeholder="İsim, ünvan veya kullanıcı adı...")
     with col2:
         role_filter = st.selectbox("Rol", ["Tümü"] + df_users['role'].unique().tolist())
     
@@ -199,7 +199,7 @@ with tab1:
     if search:
         df_filtered = df_users[
             df_users['name'].str.contains(search, case=False, na=False) |
-            df_users['email'].str.contains(search, case=False, na=False) |
+            df_users['title'].str.contains(search, case=False, na=False) |
             df_users['username'].str.contains(search, case=False, na=False)
         ]
     else:
@@ -210,7 +210,7 @@ with tab1:
     
     # Kullanıcı tablosu
     st.dataframe(
-        df_filtered[['username', 'name', 'email', 'role', 'remaining_tokens', 'total_tokens']],
+        df_filtered[['username', 'name', 'title', 'role', 'remaining_tokens', 'total_tokens']],
         use_container_width=True,
         hide_index=True
     )
