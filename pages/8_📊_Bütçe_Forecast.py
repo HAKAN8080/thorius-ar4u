@@ -238,6 +238,37 @@ def load_parameters_from_excel(uploaded_file):
         return True, "✅ Parametreler başarıyla yüklendi!"
     except Exception as e:
         return False, f"❌ Hata: {e}"
+# ==============================================
+# SIDEBAR - KULLANICI PROFİLİ VE NAVİGASYON
+# ==============================================
+
+with st.sidebar:
+    # Kullanıcı profili
+    st.markdown(f"""
+    <div style='padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                border-radius: 10px; margin-bottom: 20px; text-align: center;'>
+        <div style='font-size: 3rem; margin-bottom: 10px;'>👤</div>
+        <div style='color: white; font-size: 1.2rem; font-weight: 600;'>{st.session_state.user_info['name']}</div>
+        <div style='color: rgba(255,255,255,0.8); font-size: 0.9rem;'>{st.session_state.user_info['title']}</div>
+        <div style='margin-top: 10px; padding: 5px 10px; background: rgba(255,255,255,0.2); 
+                    border-radius: 20px; display: inline-block; color: white; font-size: 0.85rem;'>
+            {st.session_state.user_info['role'].upper()}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Token widget
+    render_token_widget(username)
+    
+    st.markdown("---")
+    
+    # Navigasyon
+    st.markdown("### 🧭 Navigasyon")
+    if st.button("🏠 Ana Sayfa", use_container_width=True):
+        st.switch_page("Home.py")
+    
+    st.markdown("---")
+
 
 # Sidebar
 st.sidebar.header("⚙️ Temel Parametreler")
