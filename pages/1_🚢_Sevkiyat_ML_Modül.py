@@ -1,10 +1,96 @@
+"""
+🚢 Sevkiyat ML Modül - EVE Sevkiyat Planlama Sistemi
+Thorius AR4U Platform - Token-Based Access
+Matris Tabanlı Cover Optimizasyonu
+"""
 import streamlit as st
 import pandas as pd
 import numpy as np
 import time
-import altair as alt
 import io
 import os
+import sys
+
+# ==================== TOKEN MANAGER IMPORT ====================
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from token_manager import check_token_and_charge, render_token_widget
+
+# ==================== AUTHENTICATION & TOKEN CONTROL ====================
+
+# Redirect to Home if not authenticated
+if 'authenticated' not in st.session_state or not st.session_state.authenticated:
+    st.warning("⚠️ Lütfen giriş yapın!")
+    st.stop()
+
+# Token kontrolü (10 token)
+module_name = "sevkiyat_ml"
+required_tokens = 10
+
+if not check_token_and_charge(module_name, required_tokens):
+    st.error(f"❌ Bu modül için {required_tokens} token gerekiyor!")
+    st.info("💡 Ana sayfaya dönüp token satın alabilirsiniz")
+    st.stop()
+
+# ==================== ORIGINAL CODE STARTS HERE ====================
+
+
+# ==================== SIDEBAR (BEFORE set_page_config) ====================
+
+with st.sidebar:
+    # User Profile Card
+    user_info = st.session_state.get('user_info', {})
+    user_name = user_info.get('name', 'Kullanıcı')
+    user_email = user_info.get('email', 'user@example.com')
+    
+    st.markdown(f"""
+    <div style="padding: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                border-radius: 10px; margin-bottom: 1rem; color: white;">
+        <div style="font-size: 1.1rem; font-weight: bold;">👤 {user_name}</div>
+        <div style="font-size: 0.8rem; opacity: 0.9;">{user_email}</div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Token Widget
+    render_token_widget()
+    
+    st.divider()
+    
+    # Navigation
+    st.markdown("### 🧭 Navigasyon")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🏠 Ana Sayfa", use_container_width=True, key="nav_home"):
+            st.switch_page("Home.py")
+    with col2:
+        if st.button("📦 Modüller", use_container_width=True, key="nav_modules"):
+            st.switch_page("Home.py")
+    
+    st.divider()
+    
+    # Module Info
+    st.markdown("### 📊 Modül Bilgisi")
+    st.info("""
+    **EVE Sevkiyat Planlama**
+    
+    ✅ Matris tabanlı optimizasyon
+    ✅ Cover analizi
+    ✅ Alım ihtiyacı hesaplama
+    ✅ Detaylı raporlama
+    """)
+    
+    st.divider()
+    
+    # Logout Button
+    if st.button("🚪 Çıkış Yap", use_container_width=True, key="logout_btn"):
+        keys_to_keep = []
+        keys_to_delete = [key for key in st.session_state.keys() if key not in keys_to_keep]
+        for key in keys_to_delete:
+            del st.session_state[key]
+        st.switch_page("Home.py")
+
+# ==================== ORIGINAL CODE CONTINUES ====================
+
 
 # -------------------------------
 # YARDIMCI FONKSİYONLAR
