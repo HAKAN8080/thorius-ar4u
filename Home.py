@@ -243,7 +243,7 @@ with col_b:
 
 with col_c:
     if st.button("📋 Sevkiyat & PO", use_container_width=True):
-        st.switch_page("pages/2_📋_Sevkiyat_PO.py")
+        st.switch_page("pages/2_📋_Retail_Analytics.py")
 
 with col_d:
     if st.button("📦 OMS Projesi", use_container_width=True):
