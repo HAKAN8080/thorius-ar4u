@@ -4,10 +4,27 @@ import numpy as np
 from datetime import datetime, timedelta
 import io
 import time
+import zipfile
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 
 st.set_page_config(page_title="Retail Analytics", page_icon="📊", layout="wide", initial_sidebar_state="expanded")
+
+# ============================================
+# CSS - YAZI TİPLERİNİ %30 KÜÇÜLT
+# ============================================
+st.markdown("""
+<style>
+    html, body, [class*="css"] {
+        font-size: 70% !important;
+    }
+    h1 { font-size: 1.8rem !important; }
+    h2 { font-size: 1.4rem !important; }
+    h3 { font-size: 1.2rem !important; }
+    .stButton>button { font-size: 0.7rem !important; }
+    .stSelectbox, .stMultiSelect, .stTextInput { font-size: 0.7rem !important; }
+</style>
+""", unsafe_allow_html=True)
 
 # ============================================
 # TOKEN SİSTEMİ
@@ -54,9 +71,11 @@ check_authentication()
 deduct_tokens(10)
 
 # ============================================
-# SESSION STATE
+# SESSION STATE - TÜM VERİLER
 # ============================================
-for key in ['inventory_df', 'urun_master', 'magaza_master', 'anlik_stok_satis', 'depo_stok', 'kpi', 'po_yasak', 'po_detay_kpi', 'alim_siparis_sonuc', 'sevkiyat_sonuc']:
+for key in ['inventory_df', 'urun_master', 'magaza_master', 'yasak_master', 'depo_stok', 
+            'anlik_stok_satis', 'haftalik_trend', 'kpi', 'po_yasak', 'po_detay_kpi', 
+            'alim_siparis_sonuc', 'sevkiyat_sonuc']:
     if key not in st.session_state:
         st.session_state[key] = None
 
@@ -119,20 +138,20 @@ if menu_option == "🏠 Ana Sayfa":
     Bu modül **tek token** ile aşağıdaki tüm analiz araçlarına erişim sağlar:
     
     #### 📂 Veri Yükleme
-    - Sevkiyat ve PO verileri yükleme
-    - Veri validasyonu ve önizleme
-    - Master data yönetimi
+    - Ürün Master, Mağaza Master, KPI
+    - Depo Stok, Anlık Stok/Satış
+    - Yasak, Haftalık Trend
+    - PO Yasak, PO Detay KPI
     
     #### 🚢 Sevkiyat Planlama
-    - KMeans clustering ile store gruplaması
-    - Bütçe bazlı sevkiyat optimizasyonu
-    - WOS (Weeks of Supply) optimizasyonu
-    - Öncelik skorlama sistemi
+    - KMeans clustering
+    - Bütçe optimizasyonu
+    - WOS optimizasyonu
     
     #### 💵 Purchase Order (PO)
-    - Depo bazlı sipariş hesaplama
-    - Cover süre optimizasyonu
-    - Yasak ürün ve açık sipariş kontrolü
+    - Depo bazlı sipariş
+    - Cover optimizasyonu
+    - Segment matrisi
     """)
     
     st.markdown("---")
@@ -142,7 +161,7 @@ if menu_option == "🏠 Ana Sayfa":
     with col1:
         st.markdown("**Sevkiyat Verileri**")
         if st.session_state.inventory_df is not None:
-            st.success(f"✅ Envanter verisi yüklü ({len(st.session_state.inventory_df):,} satır)")
+            st.success(f"✅ Envanter verisi yüklü")
         else:
             st.warning("⚠️ Envanter verisi yüklenmedi")
     
@@ -157,339 +176,534 @@ if menu_option == "🏠 Ana Sayfa":
             st.success("✅ PO verileri yüklü")
         else:
             st.warning("⚠️ PO verileri eksik")
-    
-    st.markdown("---")
-    st.info("👈 **Sol menüden** istediğiniz modüle geçiş yapabilirsiniz. Token tekrar düşmez!")
 
 
 # ============================================
-# VERİ YÜKLEME MODÜLÜ
+# VERİ YÜKLEME MODÜLÜ - AYNEN KORUNDU
 # ============================================
-elif menu_option == '📂 Veri Yükleme':
-    st.title("📂 Veri Yükleme")
+elif menu_option == "📂 Veri Yükleme":
+    st.title("📤 Ortak Veri Yükleme Merkezi")
     st.markdown("---")
     
-    # Session state başlatma
-    if 'inventory_df' not in st.session_state:
-        st.session_state.inventory_df = None
-    if 'urun_master' not in st.session_state:
-        st.session_state.urun_master = None
-    if 'magaza_master' not in st.session_state:
-        st.session_state.magaza_master = None
-    if 'anlik_stok_satis' not in st.session_state:
-        st.session_state.anlik_stok_satis = None
-    if 'depo_stok' not in st.session_state:
-        st.session_state.depo_stok = None
-    if 'kpi' not in st.session_state:
-        st.session_state.kpi = None
-    if 'po_yasak' not in st.session_state:
-        st.session_state.po_yasak = None
+    # CSV okuma fonksiyonu
+    def read_csv_safe(file):
+        try:
+            df = pd.read_csv(file, sep=';', encoding='utf-8-sig', quoting=1, on_bad_lines='warn')
+            return df, ';'
+        except:
+            try:
+                file.seek(0)
+                df = pd.read_csv(file, sep=',', encoding='utf-8-sig', quoting=1, on_bad_lines='warn')
+                return df, ','
+            except Exception as e:
+                raise Exception(f"CSV okuma hatası: {str(e)}")
     
-    # Tab yapısı
-    tab1, tab2, tab3 = st.tabs(["📊 Sevkiyat Verileri", "💵 PO Verileri", "✅ Veri Durumu"])
+    # CSV yazma fonksiyonu
+    def write_csv_safe(df):
+        return df.to_csv(index=False, sep=';', encoding='utf-8-sig', quoting=1)
     
-    # ============== TAB 1: SEVKİYAT VERİLERİ ==============
-    with tab1:
-        st.subheader("📦 Sevkiyat Planlama İçin Veri Yükleme")
-        st.markdown("---")
-        
-        # Inventory data upload
-        st.markdown("### 📊 Envanter Verisi (Zorunlu)")
-        st.info("""
-        **Gerekli kolonlar:**
-        - STORE_CODE: Mağaza kodu
-        - PRODUCT_CODE: Ürün kodu
-        - AVAILABLE_STOCK: Mevcut stok
-        - WEEKLY_SALES: Haftalık satış
-        - WEEKS_OF_SUPPLY: Haftalık tedarik süresi
-        """)
-        
-        inventory_file = st.file_uploader(
-            "Envanter CSV dosyasını yükleyin",
-            type=['csv'],
-            key='inventory_upload'
-        )
-        
-        if inventory_file is not None:
-            try:
-                inventory_df = pd.read_csv(inventory_file)
-                
-                # Kolon kontrolü
-                required_cols = ['STORE_CODE', 'PRODUCT_CODE', 'AVAILABLE_STOCK', 'WEEKLY_SALES', 'WEEKS_OF_SUPPLY']
-                missing_cols = [col for col in required_cols if col not in inventory_df.columns]
-                
-                if missing_cols:
-                    st.error(f"❌ Eksik kolonlar: {', '.join(missing_cols)}")
-                else:
-                    # Veri tiplerini düzenle
-                    inventory_df['STORE_CODE'] = inventory_df['STORE_CODE'].astype(str)
-                    inventory_df['PRODUCT_CODE'] = inventory_df['PRODUCT_CODE'].astype(str)
-                    
-                    # Sayısal kolonları kontrol et
-                    for col in ['AVAILABLE_STOCK', 'WEEKLY_SALES', 'WEEKS_OF_SUPPLY']:
-                        inventory_df[col] = pd.to_numeric(inventory_df[col], errors='coerce').fillna(0)
-                    
-                    st.session_state.inventory_df = inventory_df
-                    
-                    st.success(f"✅ {len(inventory_df):,} satır yüklendi!")
-                    
-                    # Özet istatistikler
-                    col1, col2, col3 = st.columns(3)
-                    
-                    with col1:
-                        st.metric("Toplam Mağaza", inventory_df['STORE_CODE'].nunique())
-                    
-                    with col2:
-                        st.metric("Toplam Ürün", inventory_df['PRODUCT_CODE'].nunique())
-                    
-                    with col3:
-                        st.metric("Ortalama WOS", f"{inventory_df['WEEKS_OF_SUPPLY'].mean():.2f}")
-                    
-                    # Önizleme
-                    with st.expander("👁️ Veri Önizleme"):
-                        st.dataframe(inventory_df.head(100), use_container_width=True)
-            
-            except Exception as e:
-                st.error(f"❌ Hata: {str(e)}")
+    # Örnek CSV'ler - TÜM VERİLER
+    example_csvs = {
+        'urun_master.csv': {
+            'data': pd.DataFrame({
+                'urun_kod': ['U001', 'U002', 'U003'],
+                'satici_kod': ['S001', 'S002', 'S001'],
+                'kategori_kod': ['K001', 'K002', 'K001'],
+                'umg': ['UMG1', 'UMG2', 'UMG1'],
+                'mg': ['MG1', 'MG2', 'MG1'],
+                'marka_kod': ['M001', 'M002', 'M001'],
+                'klasman_kod': ['K1', 'K2', 'K1'],
+                'nitelik': ['Nitelik 1, özellik A', 'Nitelik 2, özellik B', 'Nitelik 1, özellik C'],
+                'durum': ['Aktif', 'Aktif', 'Pasif'],
+                'ithal': [1, 0, 1],
+                'olcu_birimi': ['Adet', 'Adet', 'Kg'],
+                'koli_ici': [12, 24, 6],
+                'paket_ici': [6, 12, 3]
+            }),
+            'icon': '📦'
+        },
+        'magaza_master.csv': {
+            'data': pd.DataFrame({
+                'magaza_kod': ['M001', 'M002', 'M003'],
+                'il': ['İstanbul', 'Ankara', 'İzmir'],
+                'bolge': ['Marmara', 'İç Anadolu', 'Ege'],
+                'tip': ['Hipermarket', 'Süpermarket', 'Hipermarket'],
+                'adres_kod': ['ADR001', 'ADR002', 'ADR003'],
+                'sm': [5000, 3000, 4500],
+                'bs': ['BS1', 'BS2', 'BS1'],
+                'depo_kod': ['D001', 'D001', 'D002']
+            }),
+            'icon': '🏪'
+        },
+        'yasak.csv': {
+            'data': pd.DataFrame({
+                'urun_kod': ['U001', 'U002'],
+                'magaza_kod': ['M002', 'M001'],
+                'yasak_durum': [1, 1]
+            }),
+            'icon': '🚫'
+        },
+        'depo_stok.csv': {
+            'data': pd.DataFrame({
+                'depo_kod': ['D001', 'D001', 'D002'],
+                'urun_kod': ['U001', 'U002', 'U001'],
+                'stok': [1000, 1500, 800]
+            }),
+            'icon': '📦'
+        },
+        'anlik_stok_satis.csv': {
+            'data': pd.DataFrame({
+                'magaza_kod': ['M001', 'M001', 'M002'],
+                'urun_kod': ['U001', 'U002', 'U001'],
+                'stok': [100, 150, 120],
+                'yol': [20, 30, 25],
+                'satis': [50, 40, 45],
+                'ciro': [5000, 6000, 5500],
+                'smm': [2.0, 3.75, 2.67]
+            }),
+            'icon': '📊'
+        },
+        'haftalik_trend.csv': {
+            'data': pd.DataFrame({
+                'klasman_kod': ['K1', 'K1', 'K2'],
+                'marka_kod': ['M001', 'M001', 'M002'],
+                'yil': [2025, 2025, 2025],
+                'hafta': [40, 41, 40],
+                'stok': [10000, 9500, 15000],
+                'satis': [2000, 2100, 1800],
+                'ciro': [200000, 210000, 270000],
+                'smm': [5.0, 4.52, 8.33],
+                'iftutar': [1000000, 950000, 1500000]
+            }),
+            'icon': '📈'
+        },
+        'kpi.csv': {
+            'data': pd.DataFrame({
+                'mg_id': ['MG1', 'MG2', 'MG3'],
+                'min_deger': [0, 100, 500],
+                'max_deger': [99, 499, 999],
+                'forward_cover': [1.5, 2.0, 2.5]
+            }),
+            'icon': '🎯'
+        },
+        'po_yasak.csv': {
+            'data': pd.DataFrame({
+                'urun_kodu': ['U001', 'U002', 'U003'],
+                'yasak_durum': [1, 0, 1],
+                'acik_siparis': [100, 0, 250]
+            }),
+            'icon': '🚫'
+        },
+        'po_detay_kpi.csv': {
+            'data': pd.DataFrame({
+                'marka_kod': ['M001', 'M002', 'M003'],
+                'mg_kod': ['MG1', 'MG2', 'MG1'],
+                'cover_hedef': [12.0, 15.0, 10.0],
+                'bkar_hedef': [25.0, 30.0, 20.0]
+            }),
+            'icon': '🎯'
+        }
+    }
     
-    # ============== TAB 2: PO VERİLERİ ==============
-    with tab2:
-        st.subheader("💵 Purchase Order İçin Veri Yükleme")
-        st.markdown("---")
+    # Veri tanımları - AYNEN
+    data_definitions = {
+        'urun_master': {
+            'name': 'Ürün Master',
+            'required': True,
+            'columns': ['urun_kod', 'satici_kod', 'kategori_kod', 'umg', 'mg', 'marka_kod', 
+                       'klasman_kod', 'nitelik', 'durum', 'ithal', 'olcu_birimi', 'koli_ici', 'paket_ici'],
+            'state_key': 'urun_master',
+            'icon': '📦',
+            'modules': ['Sevkiyat', 'PO', 'Prepack']
+        },
+        'magaza_master': {
+            'name': 'Mağaza Master',
+            'required': True,
+            'columns': ['magaza_kod', 'il', 'bolge', 'tip', 'adres_kod', 'sm', 'bs', 'depo_kod'],
+            'state_key': 'magaza_master',
+            'icon': '🏪',
+            'modules': ['Sevkiyat', 'PO']
+        },
+        'depo_stok': {
+            'name': 'Depo Stok',
+            'required': True,
+            'columns': ['depo_kod', 'urun_kod', 'stok'],
+            'state_key': 'depo_stok',
+            'icon': '📦',
+            'modules': ['Sevkiyat', 'PO']
+        },
+        'anlik_stok_satis': {
+            'name': 'Anlık Stok/Satış',
+            'required': True,
+            'columns': ['magaza_kod', 'urun_kod', 'stok', 'yol', 'satis', 'ciro', 'smm'],
+            'state_key': 'anlik_stok_satis',
+            'icon': '📊',
+            'modules': ['Sevkiyat', 'PO']
+        },
+        'kpi': {
+            'name': 'KPI',
+            'required': True,
+            'columns': ['mg_id', 'min_deger', 'max_deger', 'forward_cover'],
+            'state_key': 'kpi',
+            'icon': '🎯',
+            'modules': ['Sevkiyat', 'PO']
+        },
+        'yasak_master': {
+            'name': 'Yasak',
+            'required': False,
+            'columns': ['urun_kod', 'magaza_kod', 'yasak_durum'],
+            'state_key': 'yasak_master',
+            'icon': '🚫',
+            'modules': ['Sevkiyat']
+        },
+        'haftalik_trend': {
+            'name': 'Haftalık Trend',
+            'required': False,
+            'columns': ['klasman_kod', 'marka_kod', 'yil', 'hafta', 'stok', 'satis', 'ciro', 'smm', 'iftutar'],
+            'state_key': 'haftalik_trend',
+            'icon': '📈',
+            'modules': ['Sevkiyat']
+        },
+        'po_yasak': {
+            'name': 'PO Yasak',
+            'required': False,
+            'columns': ['urun_kodu', 'yasak_durum', 'acik_siparis'],
+            'state_key': 'po_yasak',
+            'icon': '🚫',
+            'modules': ['PO']
+        },
+        'po_detay_kpi': {
+            'name': 'PO Detay KPI',
+            'required': False,
+            'columns': ['marka_kod', 'mg_kod', 'cover_hedef', 'bkar_hedef'],
+            'state_key': 'po_detay_kpi',
+            'icon': '🎯',
+            'modules': ['PO']
+        }
+    }
+    
+    # Kullanıcı kılavuzu kısmı - SADECE BUTON KISMI (Tam metin çok uzun)
+    st.markdown("---")
+    st.subheader("📖 Kullanıcı Kılavuzu")
+    st.info("💡 **İpucu:** Kılavuzu indirip kaydedin, ihtiyaç duyduğunuzda açın!")
+    
+    # PARÇALI YÜKLEME
+    st.markdown("---")
+    st.subheader("📊 Anlık Stok/Satış - Parçalı Yükleme")
+    st.info("💡 **İpucu:** Büyük dosyaları parça parça yükleyebilirsiniz. Sistem otomatik birleştirecek.")
+    
+    anlik_parts = st.file_uploader(
+        "Anlık Stok/Satış CSV parçalarını seçin (birden fazla)",
+        type=['csv'],
+        accept_multiple_files=True,
+        key="anlik_parts_upload"
+    )
+    
+    if anlik_parts:
+        st.write(f"**{len(anlik_parts)} parça seçildi**")
         
-        # Anlık Stok/Satış
-        st.markdown("### 📊 Anlık Stok/Satış (Zorunlu)")
-        anlik_file = st.file_uploader(
-            "Anlık Stok/Satış CSV dosyasını yükleyin",
-            type=['csv'],
-            key='anlik_upload'
-        )
-        
-        if anlik_file is not None:
+        if st.button("🔗 Parçaları Birleştir ve Yükle", type="primary", use_container_width=True):
             try:
-                anlik_df = pd.read_csv(anlik_file)
+                combined_df = None
+                total_rows = 0
+                part_info = []
                 
-                # Kolon kontrolü
-                required_cols = ['urun_kod', 'magaza_kod', 'satis', 'stok', 'yol']
-                missing_cols = [col for col in required_cols if col not in anlik_df.columns]
+                for idx, part_file in enumerate(anlik_parts, 1):
+                    df_part, used_sep = read_csv_safe(part_file)
+                    expected_cols = set(data_definitions['anlik_stok_satis']['columns'])
+                    if not expected_cols.issubset(set(df_part.columns)):
+                        st.error(f"❌ {part_file.name}: Eksik kolonlar var!")
+                        continue
+                    
+                    df_part = df_part[data_definitions['anlik_stok_satis']['columns']].copy()
+                    string_cols = df_part.select_dtypes(include=['object']).columns
+                    for col in string_cols:
+                        df_part[col] = df_part[col].str.strip()
+                    
+                    numeric_cols = ['stok', 'yol', 'satis', 'ciro', 'smm']
+                    for col in numeric_cols:
+                        if col in df_part.columns:
+                            df_part[col] = pd.to_numeric(df_part[col], errors='coerce').fillna(0)
+                    
+                    if combined_df is None:
+                        combined_df = df_part
+                    else:
+                        combined_df = pd.concat([combined_df, df_part], ignore_index=True)
+                    
+                    part_info.append(f"✅ Parça {idx}: {len(df_part):,} satır")
+                    total_rows += len(df_part)
                 
-                if missing_cols:
-                    st.error(f"❌ Eksik kolonlar: {', '.join(missing_cols)}")
-                else:
-                    anlik_df['urun_kod'] = anlik_df['urun_kod'].astype(str)
-                    anlik_df['magaza_kod'] = anlik_df['magaza_kod'].astype(str)
+                if combined_df is not None:
+                    before_dedup = len(combined_df)
+                    combined_df = combined_df.drop_duplicates(subset=['magaza_kod', 'urun_kod'], keep='last')
+                    after_dedup = len(combined_df)
+                    st.session_state.anlik_stok_satis = combined_df
                     
-                    for col in ['satis', 'stok', 'yol']:
-                        anlik_df[col] = pd.to_numeric(anlik_df[col], errors='coerce').fillna(0)
+                    st.success(f"🎉 **Başarıyla birleştirildi!**")
+                    for info in part_info:
+                        st.write(info)
                     
-                    st.session_state.anlik_stok_satis = anlik_df
-                    st.success(f"✅ Anlık Stok/Satış yüklendi: {len(anlik_df):,} satır")
+                    st.info(f"""
+                    **Özet:**
+                    - Toplam yüklenen: {total_rows:,} satır
+                    - Duplicate temizlendi: {before_dedup - after_dedup:,} satır
+                    - Final: {after_dedup:,} satır
+                    """)
+                    
+                    time.sleep(1)
+                    st.rerun()
             
             except Exception as e:
-                st.error(f"❌ Hata: {str(e)}")
-        
-        st.markdown("---")
-        
-        # Depo Stok
-        st.markdown("### 📦 Depo Stok (Zorunlu)")
-        depo_file = st.file_uploader(
-            "Depo Stok CSV dosyasını yükleyin",
+                st.error(f"❌ Birleştirme hatası: {str(e)}")
+    
+    st.markdown("---")
+    
+    # ÇOKLU DOSYA YÜKLEME
+    st.subheader("📤 Çoklu Dosya Yükleme")
+    
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        uploaded_files = st.file_uploader(
+            "CSV dosyalarını seçin (birden fazla seçebilirsiniz)",
             type=['csv'],
-            key='depo_upload'
+            accept_multiple_files=True,
+            key="multi_upload"
+        )
+    
+    with col2:
+        separator_option = st.selectbox(
+            "CSV Ayracı:",
+            options=['Otomatik Algıla', 'Noktalı Virgül (;)', 'Virgül (,)', 'Tab (\\t)'],
+            help="CSV dosyanızdaki alan ayracını seçin"
         )
         
-        if depo_file is not None:
-            try:
-                depo_df = pd.read_csv(depo_file)
+        separator_map = {
+            'Otomatik Algıla': 'auto',
+            'Noktalı Virgül (;)': ';',
+            'Virgül (,)': ',',
+            'Tab (\\t)': '\t'
+        }
+        selected_separator = separator_map[separator_option]
+    
+    # Örnek İndirme + Yükleme Butonları
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if uploaded_files:
+            if st.button("🚀 Tüm Dosyaları Yükle", type="primary", use_container_width=True):
+                upload_results = []
                 
-                required_cols = ['urun_kod', 'depo_kod', 'stok']
-                missing_cols = [col for col in required_cols if col not in depo_df.columns]
-                
-                if missing_cols:
-                    st.error(f"❌ Eksik kolonlar: {', '.join(missing_cols)}")
-                else:
-                    depo_df['urun_kod'] = depo_df['urun_kod'].astype(str)
-                    depo_df['depo_kod'] = depo_df['depo_kod'].astype(str)
-                    depo_df['stok'] = pd.to_numeric(depo_df['stok'], errors='coerce').fillna(0)
+                for uploaded_file in uploaded_files:
+                    filename = uploaded_file.name.lower()
+                    matched_key = None
+                    for key, definition in data_definitions.items():
+                        if key in filename or definition['name'].lower().replace(' ', '_') in filename:
+                            matched_key = key
+                            break
                     
-                    st.session_state.depo_stok = depo_df
-                    st.success(f"✅ Depo Stok yüklendi: {len(depo_df):,} satır")
-            
-            except Exception as e:
-                st.error(f"❌ Hata: {str(e)}")
-        
-        st.markdown("---")
-        
-        # KPI
-        st.markdown("### 🎯 KPI (Zorunlu)")
-        kpi_file = st.file_uploader(
-            "KPI CSV dosyasını yükleyin",
-            type=['csv'],
-            key='kpi_upload'
-        )
-        
-        if kpi_file is not None:
-            try:
-                kpi_df = pd.read_csv(kpi_file)
-                st.session_state.kpi = kpi_df
-                st.success(f"✅ KPI yüklendi: {len(kpi_df):,} satır")
+                    if not matched_key:
+                        upload_results.append({'Dosya': uploaded_file.name, 'Durum': '❌ Eşleştirilemedi'})
+                        continue
+                    
+                    definition = data_definitions[matched_key]
+                    
+                    try:
+                        if selected_separator == 'auto':
+                            df, used_sep = read_csv_safe(uploaded_file)
+                        else:
+                            df = pd.read_csv(uploaded_file, sep=selected_separator, encoding='utf-8-sig', 
+                                           quoting=1, on_bad_lines='warn')
+                        
+                        existing_cols = set(df.columns)
+                        required_cols = set(definition['columns'])
+                        missing_cols = required_cols - existing_cols
+                        
+                        if missing_cols:
+                            upload_results.append({
+                                'Dosya': uploaded_file.name,
+                                'Durum': f"❌ Eksik kolon: {', '.join(list(missing_cols)[:3])}"
+                            })
+                        else:
+                            df_clean = df[definition['columns']].copy()
+                            string_columns = df_clean.select_dtypes(include=['object']).columns
+                            for col in string_columns:
+                                df_clean[col] = df_clean[col].str.strip() if df_clean[col].dtype == 'object' else df_clean[col]
+                            
+                            # Sayısal kolonları zorla
+                            if matched_key == 'anlik_stok_satis':
+                                numeric_cols = ['stok', 'yol', 'satis', 'ciro', 'smm']
+                                for col in numeric_cols:
+                                    if col in df_clean.columns:
+                                        df_clean[col] = pd.to_numeric(df_clean[col], errors='coerce').fillna(0)
+                            
+                            elif matched_key == 'depo_stok':
+                                if 'stok' in df_clean.columns:
+                                    df_clean['stok'] = pd.to_numeric(df_clean['stok'], errors='coerce').fillna(0)
+                            
+                            elif matched_key == 'kpi':
+                                numeric_cols = ['min_deger', 'max_deger', 'forward_cover']
+                                for col in numeric_cols:
+                                    if col in df_clean.columns:
+                                        df_clean[col] = pd.to_numeric(df_clean[col], errors='coerce').fillna(0)
+                            
+                            st.session_state[definition['state_key']] = df_clean
+                            upload_results.append({
+                                'Dosya': uploaded_file.name,
+                                'Durum': f"✅ {len(df_clean):,} satır"
+                            })
+                    
+                    except Exception as e:
+                        upload_results.append({
+                            'Dosya': uploaded_file.name,
+                            'Durum': f"❌ Hata: {str(e)[:30]}"
+                        })
                 
-                with st.expander("👁️ KPI Önizleme"):
-                    st.dataframe(kpi_df.head(50), use_container_width=True)
-            
-            except Exception as e:
-                st.error(f"❌ Hata: {str(e)}")
+                st.markdown("---")
+                for result in upload_results:
+                    if '✅' in result['Durum']:
+                        st.success(f"{result['Dosya']}: {result['Durum']}")
+                    else:
+                        st.error(f"{result['Dosya']}: {result['Durum']}")
+                
+                time.sleep(1)
+                st.rerun()
+    
+    with col2:
+        # Örnek CSV indirme
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            for filename, file_info in example_csvs.items():
+                csv_data = write_csv_safe(file_info['data'])
+                zip_file.writestr(filename, csv_data)
         
-        st.markdown("---")
+        st.download_button(
+            label="📥 Örnek CSV Dosyalarını İndir",
+            data=zip_buffer.getvalue(),
+            file_name="ornek_csv_dosyalari.zip",
+            mime="application/zip",
+            type="secondary",
+            use_container_width=True
+        )
+    
+    st.markdown("---")
+    
+    # VERİ DURUMU TABLOSU
+    st.subheader("📊 Veri Yükleme Durumu")
+    
+    status_data = []
+    for key, definition in data_definitions.items():
+        data = st.session_state.get(definition['state_key'])
         
-        # Opsiyonel dosyalar
-        st.markdown("### 📋 Opsiyonel Dosyalar")
+        if data is not None and len(data) > 0:
+            status = '✅ Başarılı'
+            kolon_sayisi = str(len(data.columns))
+            boyut_mb = f"{data.memory_usage(deep=True).sum() / 1024**2:.2f}"
+        else:
+            status = '❌ Yüklenmedi'
+            kolon_sayisi = '-'
+            boyut_mb = '-'
         
-        col1, col2 = st.columns(2)
+        status_data.append({
+            'CSV Adı': f"{definition['icon']} {definition['name']}",
+            'Zorunlu': 'Evet ⚠️' if definition['required'] else 'Hayır ℹ️',
+            'Kolon Sayısı': kolon_sayisi,
+            'Durum': status,
+            'Boyut (MB)': boyut_mb
+        })
+    
+    status_df = pd.DataFrame(status_data)
+    st.dataframe(status_df, use_container_width=True, hide_index=True, height=350)
+    
+    # Özet metrikler
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        zorunlu_count = sum(1 for d in data_definitions.values() if d['required'])
+        zorunlu_loaded = sum(1 for k, d in data_definitions.items() 
+                            if d['required'] and st.session_state.get(d['state_key']) is not None)
+        st.metric("Zorunlu Dosyalar", f"{zorunlu_loaded}/{zorunlu_count}")
+    
+    with col2:
+        opsiyonel_count = sum(1 for d in data_definitions.values() if not d['required'])
+        opsiyonel_loaded = sum(1 for k, d in data_definitions.items() 
+                              if not d['required'] and st.session_state.get(d['state_key']) is not None)
+        st.metric("Opsiyonel Dosyalar", f"{opsiyonel_loaded}/{opsiyonel_count}")
+    
+    with col3:
+        all_ready = zorunlu_loaded == zorunlu_count
+        st.metric("Sistem Durumu", "Hazır ✅" if all_ready else "Eksik ⚠️")
+    
+    st.markdown("---")
+    
+    # TEK DOSYA DETAYI
+    st.subheader("🔍 Detaylı Veri İncelemesi")
+    
+    selected_data = st.selectbox(
+        "İncelemek istediğiniz veriyi seçin:",
+        options=[k for k in data_definitions.keys() if st.session_state.get(data_definitions[k]['state_key']) is not None],
+        format_func=lambda x: f"{data_definitions[x]['icon']} {data_definitions[x]['name']}",
+        key="detail_select"
+    ) if any(st.session_state.get(data_definitions[k]['state_key']) is not None for k in data_definitions.keys()) else None
+    
+    if selected_data:
+        current_def = data_definitions[selected_data]
+        data = st.session_state[current_def['state_key']]
         
+        col1, col2, col3 = st.columns(3)
         with col1:
-            # Ürün Master
-            st.markdown("**Ürün Master**")
-            urun_master_file = st.file_uploader(
-                "Ürün Master CSV",
-                type=['csv'],
-                key='urun_master_upload'
-            )
-            
-            if urun_master_file is not None:
-                try:
-                    urun_master = pd.read_csv(urun_master_file)
-                    if 'urun_kod' in urun_master.columns:
-                        urun_master['urun_kod'] = urun_master['urun_kod'].astype(str)
-                    st.session_state.urun_master = urun_master
-                    st.success(f"✅ Ürün Master: {len(urun_master):,} satır")
-                except Exception as e:
-                    st.error(f"❌ Hata: {str(e)}")
-        
+            st.metric("Satır", f"{len(data):,}")
         with col2:
-            # Mağaza Master
-            st.markdown("**Mağaza Master**")
-            magaza_master_file = st.file_uploader(
-                "Mağaza Master CSV",
-                type=['csv'],
-                key='magaza_master_upload'
-            )
-            
-            if magaza_master_file is not None:
-                try:
-                    magaza_master = pd.read_csv(magaza_master_file)
-                    if 'magaza_kod' in magaza_master.columns:
-                        magaza_master['magaza_kod'] = magaza_master['magaza_kod'].astype(str)
-                    if 'depo_kod' in magaza_master.columns:
-                        magaza_master['depo_kod'] = magaza_master['depo_kod'].astype(str)
-                    st.session_state.magaza_master = magaza_master
-                    st.success(f"✅ Mağaza Master: {len(magaza_master):,} satır")
-                except Exception as e:
-                    st.error(f"❌ Hata: {str(e)}")
-        
-        # PO Yasak
-        st.markdown("**PO Yasak Listesi**")
-        po_yasak_file = st.file_uploader(
-            "PO Yasak CSV",
-            type=['csv'],
-            key='po_yasak_upload'
+            st.metric("Kolon", len(data.columns))
+        with col3:
+            st.metric("Bellek", f"{data.memory_usage(deep=True).sum() / 1024**2:.2f} MB")
+    
+    st.markdown("---")
+    
+    # CSV İNDİR
+    st.subheader("📤 Veri Dosyası İndir")
+    
+    if any(st.session_state.get(data_definitions[k]['state_key']) is not None for k in data_definitions.keys()):
+        export_data = st.selectbox(
+            "İndirmek istediğiniz veriyi seçin:",
+            options=[k for k in data_definitions.keys() if st.session_state.get(data_definitions[k]['state_key']) is not None],
+            format_func=lambda x: f"{data_definitions[x]['icon']} {data_definitions[x]['name']}",
+            key="export_select"
         )
         
-        if po_yasak_file is not None:
-            try:
-                po_yasak = pd.read_csv(po_yasak_file)
-                if 'urun_kodu' in po_yasak.columns:
-                    po_yasak['urun_kodu'] = po_yasak['urun_kodu'].astype(str)
-                st.session_state.po_yasak = po_yasak
-                st.success(f"✅ PO Yasak: {len(po_yasak):,} satır")
-            except Exception as e:
-                st.error(f"❌ Hata: {str(e)}")
-    
-    # ============== TAB 3: VERİ DURUMU ==============
-    with tab3:
-        st.subheader("✅ Yüklü Veri Durumu")
-        st.markdown("---")
-        
-        # Sevkiyat verileri
-        st.markdown("### 📦 Sevkiyat Planlama Verileri")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            if st.session_state.inventory_df is not None:
-                df = st.session_state.inventory_df
-                st.success("✅ Envanter Verisi")
-                st.write(f"- Satır sayısı: {len(df):,}")
-                st.write(f"- Mağaza sayısı: {df['STORE_CODE'].nunique()}")
-                st.write(f"- Ürün sayısı: {df['PRODUCT_CODE'].nunique()}")
-            else:
-                st.error("❌ Envanter Verisi yüklenmedi")
-        
-        st.markdown("---")
-        
-        # PO verileri
-        st.markdown("### 💵 Purchase Order Verileri")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("**Zorunlu Veriler:**")
+        if export_data:
+            export_def = data_definitions[export_data]
+            export_df = st.session_state[export_def['state_key']]
             
-            if st.session_state.anlik_stok_satis is not None:
-                df = st.session_state.anlik_stok_satis
-                st.success("✅ Anlık Stok/Satış")
-                st.write(f"- Satır: {len(df):,}")
-            else:
-                st.error("❌ Anlık Stok/Satış")
+            col1, col2, col3 = st.columns([1, 1, 1])
             
-            if st.session_state.depo_stok is not None:
-                df = st.session_state.depo_stok
-                st.success("✅ Depo Stok")
-                st.write(f"- Satır: {len(df):,}")
-            else:
-                st.error("❌ Depo Stok")
+            with col1:
+                csv_data = write_csv_safe(export_df)
+                st.download_button(
+                    label=f"📥 CSV İndir (;)",
+                    data=csv_data,
+                    file_name=f"{export_def['name'].lower().replace(' ', '_')}.csv",
+                    mime="text/csv",
+                    use_container_width=True
+                )
             
-            if st.session_state.kpi is not None:
-                df = st.session_state.kpi
-                st.success("✅ KPI")
-                st.write(f"- Satır: {len(df):,}")
-            else:
-                st.error("❌ KPI")
-        
-        with col2:
-            st.markdown("**Opsiyonel Veriler:**")
+            with col2:
+                csv_data_comma = export_df.to_csv(index=False, encoding='utf-8-sig')
+                st.download_button(
+                    label=f"📥 CSV İndir (,)",
+                    data=csv_data_comma,
+                    file_name=f"{export_def['name'].lower().replace(' ', '_')}_comma.csv",
+                    mime="text/csv",
+                    use_container_width=True
+                )
             
-            if st.session_state.urun_master is not None:
-                st.success("✅ Ürün Master")
-                st.write(f"- Satır: {len(st.session_state.urun_master):,}")
-            else:
-                st.warning("⚠️ Ürün Master")
-            
-            if st.session_state.magaza_master is not None:
-                st.success("✅ Mağaza Master")
-                st.write(f"- Satır: {len(st.session_state.magaza_master):,}")
-            else:
-                st.warning("⚠️ Mağaza Master")
-            
-            if st.session_state.po_yasak is not None:
-                st.success("✅ PO Yasak")
-                st.write(f"- Satır: {len(st.session_state.po_yasak):,}")
-            else:
-                st.warning("⚠️ PO Yasak")
-        
-        st.markdown("---")
-        
-        # Veri temizleme
-        if st.button("🗑️ Tüm Verileri Temizle", type="secondary"):
-            st.session_state.inventory_df = None
-            st.session_state.anlik_stok_satis = None
-            st.session_state.depo_stok = None
-            st.session_state.kpi = None
-            st.session_state.urun_master = None
-            st.session_state.magaza_master = None
-            st.session_state.po_yasak = None
-            st.success("✅ Tüm veriler temizlendi!")
-            st.rerun()
+            with col3:
+                if st.button("🗑️ Bu Veriyi Sil", use_container_width=True):
+                    st.session_state[export_def['state_key']] = None
+                    st.success(f"✅ {export_def['name']} silindi!")
+                    time.sleep(0.5)
+                    st.rerun()
+    else:
+        st.info("İndirilebilecek veri yok")
 
 # ============================================
 # SEVKİYAT PLANLAMA MODÜLÜ
