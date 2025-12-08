@@ -393,6 +393,237 @@ with tab2:
     st.markdown(gantt_html, unsafe_allow_html=True)
     
     st.markdown("---")
+    # Bu kodu TAB 2: GANTT CHART'ın sonuna ekle
+# st.markdown("### 📌 Durum Göstergeleri") satırından ÖNCE
+
+    # ============================================
+    # EXCEL EXPORT BÖLÜMÜ
+    # ============================================
+    
+    st.markdown("---")
+    st.subheader("📥 Gantt Chart İndir")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        # Excel export - Gantt formatında
+        if st.button("📊 Excel İndir (Gantt Formatı)", use_container_width=True, type="primary"):
+            # Excel workbook oluştur
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Gantt Chart"
+            
+            # Başlık satırı
+            headers = ['Görev', 'ID', 'Sorumlu', 'Durum'] + [f'H{h}' for h in range(1, max_hafta + 1)]
+            ws.append(headers)
+            
+            # Başlık stili
+            header_fill = PatternFill(start_color="E3F2FD", end_color="E3F2FD", fill_type="solid")
+            header_font = Font(bold=True, size=11)
+            
+            for cell in ws[1]:
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+            
+            # Renkler - Durum bazında
+            durum_colors = {
+                'Tamamlandı': '4CAF50',      # Yeşil
+                'Devam Ediyor': 'FF9800',    # Turuncu
+                'Planlandı': '2196F3',       # Mavi
+                'Beklemede': '9E9E9E'        # Gri
+            }
+            
+            # Her faz için satırlar ekle
+            row_num = 2
+            for faz_adi, faz in fazlar.items():
+                # Faz başlığı
+                faz_row = [f"{faz['renk']} {faz_adi}"] + [''] * (max_hafta + 3)
+                ws.append(faz_row)
+                
+                # Faz satırını birleştir ve stil ver
+                ws.merge_cells(f'A{row_num}:{openpyxl.utils.get_column_letter(max_hafta + 4)}{row_num}')
+                faz_cell = ws[f'A{row_num}']
+                faz_cell.fill = PatternFill(start_color="E3F2FD", end_color="E3F2FD", fill_type="solid")
+                faz_cell.font = Font(bold=True, size=12)
+                faz_cell.alignment = Alignment(horizontal='left', vertical='center')
+                row_num += 1
+                
+                # Görevler
+                for gorev in faz['gorevler']:
+                    gorev_row = [
+                        gorev['gorev'],
+                        gorev['id'],
+                        gorev['sorumlu'],
+                        gorev['durum']
+                    ]
+                    
+                    # Hafta hücreleri
+                    bas_h = gorev['baslangic_hafta']
+                    sure = gorev['sure']
+                    
+                    for h in range(1, max_hafta + 1):
+                        if h >= bas_h and h < bas_h + sure:
+                            gorev_row.append(gorev['id'])  # Görev ID'sini yaz
+                        else:
+                            gorev_row.append('')
+                    
+                    ws.append(gorev_row)
+                    
+                    # Görev satırına stil ver
+                    current_row = ws[row_num]
+                    
+                    # Durum hücresine renk
+                    durum_cell = current_row[3]
+                    durum_color = durum_colors.get(gorev['durum'], 'FFFFFF')
+                    durum_cell.fill = PatternFill(start_color=durum_color, end_color=durum_color, fill_type="solid")
+                    durum_cell.font = Font(color="FFFFFF", bold=True)
+                    durum_cell.alignment = Alignment(horizontal='center', vertical='center')
+                    
+                    # Gantt hücrelerine renk
+                    for col_idx in range(5, max_hafta + 5):
+                        cell = current_row[col_idx - 1]
+                        if cell.value == gorev['id']:
+                            cell.fill = PatternFill(start_color=durum_color, end_color=durum_color, fill_type="solid")
+                            cell.font = Font(color="FFFFFF", size=8, bold=True)
+                            cell.alignment = Alignment(horizontal='center', vertical='center')
+                    
+                    row_num += 1
+            
+            # Kolon genişlikleri
+            ws.column_dimensions['A'].width = 45
+            ws.column_dimensions['B'].width = 8
+            ws.column_dimensions['C'].width = 30
+            ws.column_dimensions['D'].width = 15
+            for col_idx in range(5, max_hafta + 5):
+                ws.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = 4
+            
+            # Border ekle - Tüm hücrelere
+            thin_border = Border(
+                left=Side(style='thin', color='000000'),
+                right=Side(style='thin', color='000000'),
+                top=Side(style='thin', color='000000'),
+                bottom=Side(style='thin', color='000000')
+            )
+            
+            for row in ws.iter_rows(min_row=1, max_row=row_num-1, min_col=1, max_col=max_hafta+4):
+                for cell in row:
+                    cell.border = thin_border
+            
+            # Satır yüksekliği
+            for row in range(1, row_num):
+                ws.row_dimensions[row].height = 25
+            
+            # Excel'i kaydet
+            output = BytesIO()
+            wb.save(output)
+            output.seek(0)
+            
+            st.download_button(
+                label="📥 Gantt_Chart.xlsx İndir",
+                data=output,
+                file_name=f"Gantt_Chart_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True
+            )
+    
+    with col2:
+        # CSV export - Basit tablo
+        if st.button("📋 CSV İndir (Tablo)", use_container_width=True):
+            tum_gorevler = []
+            for faz_adi, faz in fazlar.items():
+                for g in faz['gorevler']:
+                    bas = baslangic + timedelta(weeks=g['baslangic_hafta']-1)
+                    bit = bas + timedelta(weeks=g['sure'])
+                    tum_gorevler.append({
+                        'Faz': faz_adi,
+                        'ID': g['id'],
+                        'Görev': g['gorev'],
+                        'Açıklama': g['aciklama'],
+                        'Süre (Hafta)': g['sure'],
+                        'Başlangıç Haftası': g['baslangic_hafta'],
+                        'Başlangıç Tarihi': bas.strftime('%d.%m.%Y'),
+                        'Bitiş Tarihi': bit.strftime('%d.%m.%Y'),
+                        'Sorumlu': g['sorumlu'],
+                        'Öncelik': g['oncelik'],
+                        'Durum': g['durum']
+                    })
+            
+            df_export = pd.DataFrame(tum_gorevler)
+            csv = df_export.to_csv(index=False, encoding='utf-8-sig')
+            
+            st.download_button(
+                label="📥 Gorev_Listesi.csv İndir",
+                data=csv,
+                file_name=f"Gorev_Listesi_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+    
+    with col3:
+        # Özet rapor - 3 sayfa Excel
+        if st.button("📊 Özet Rapor (Excel)", use_container_width=True):
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                # Sayfa 1: Faz özeti
+                faz_data = []
+                for faz_adi, faz in fazlar.items():
+                    tamamlanan_gorev = sum(1 for g in faz['gorevler'] if g['durum'] == 'Tamamlandı')
+                    toplam_gorev = len(faz['gorevler'])
+                    faz_data.append({
+                        'Faz': faz_adi,
+                        'Başlangıç Haftası': faz['baslangic'],
+                        'Süre (Hafta)': faz['sure'],
+                        'Toplam Görev': toplam_gorev,
+                        'Tamamlanan': tamamlanan_gorev,
+                        'Tamamlanma %': round(tamamlanan_gorev / toplam_gorev * 100, 1) if toplam_gorev > 0 else 0,
+                        'Durum': faz['durum']
+                    })
+                
+                df_faz = pd.DataFrame(faz_data)
+                df_faz.to_excel(writer, sheet_name='Faz Özeti', index=False)
+                
+                # Sayfa 2: Tüm görevler
+                tum_gorevler = []
+                for faz_adi, faz in fazlar.items():
+                    for g in faz['gorevler']:
+                        bas = baslangic + timedelta(weeks=g['baslangic_hafta']-1)
+                        bit = bas + timedelta(weeks=g['sure'])
+                        tum_gorevler.append({
+                            'Faz': faz_adi,
+                            'ID': g['id'],
+                            'Görev': g['gorev'],
+                            'Açıklama': g['aciklama'],
+                            'Süre': g['sure'],
+                            'Başlangıç H': g['baslangic_hafta'],
+                            'Başlangıç': bas.strftime('%d.%m.%Y'),
+                            'Bitiş': bit.strftime('%d.%m.%Y'),
+                            'Sorumlu': g['sorumlu'],
+                            'Öncelik': g['oncelik'],
+                            'Durum': g['durum']
+                        })
+                
+                df_gorev = pd.DataFrame(tum_gorevler)
+                df_gorev.to_excel(writer, sheet_name='Tüm Görevler', index=False)
+                
+                # Sayfa 3: Durum özeti
+                durum_data = []
+                for durum in ['Planlandı', 'Devam Ediyor', 'Tamamlandı', 'Beklemede']:
+                    count = sum(1 for faz in fazlar.values() for g in faz['gorevler'] if g['durum'] == durum)
+                    durum_data.append({'Durum': durum, 'Görev Sayısı': count})
+                
+                df_durum = pd.DataFrame(durum_data)
+                df_durum.to_excel(writer, sheet_name='Durum Özeti', index=False)
+            
+            output.seek(0)
+            
+            st.download_button(
+                label="📥 Proje_Ozet_Raporu.xlsx İndir",
+                data=output,
+                file_name=f"Proje_Ozet_Raporu_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True
+            )
     st.markdown("### 📌 Durum Göstergeleri")
     col1, col2, col3, col4 = st.columns(4)
     col1.markdown("🟢 **Tamamlandı** - Yeşil")
