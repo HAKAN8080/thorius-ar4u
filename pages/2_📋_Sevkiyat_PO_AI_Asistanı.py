@@ -107,6 +107,8 @@ if 'po_yasak' not in st.session_state:
     st.session_state.po_yasak = None
 if 'po_detay_kpi' not in st.session_state:
     st.session_state.po_detay_kpi = None
+if 'cover_segment_matrix' not in st.session_state:
+    st.session_state.cover_segment_matrix = None
 
 # Segmentasyon parametreleri - TEK TANIMLA
 if 'segmentation_params' not in st.session_state:
