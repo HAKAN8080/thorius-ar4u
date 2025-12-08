@@ -54,12 +54,8 @@ if not check_authentication():
 
 # Token kontrolü - Sadece ilk açılışta
 if 'sevkiyat_opened' not in st.session_state:
-    if deduct_tokens(10):
-        st.session_state.sevkiyat_opened = True
-        st.success("✅ Sevkiyat modülü açıldı! (10 token)")
-    else:
-        st.error("❌ Yetersiz token!")
-        st.stop()
+    st.session_state.sevkiyat_opened = True
+    # Token düşüşü: Home.py'da yapılıyor, burada tekrar düşürme!
 
 # ============================================
 # SIDEBAR - KULLANICI PROFILI
