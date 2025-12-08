@@ -99,6 +99,14 @@ if 'haftalik_trend' not in st.session_state:
 if 'kpi' not in st.session_state:
     st.session_state.kpi = None
 
+# PO session state'leri
+if 'alim_siparis_sonuc' not in st.session_state:
+    st.session_state.alim_siparis_sonuc = None
+if 'po_yasak' not in st.session_state:
+    st.session_state.po_yasak = None
+if 'po_detay_kpi' not in st.session_state:
+    st.session_state.po_detay_kpi = None
+
 # Segmentasyon parametreleri - TEK TANIMLA
 if 'segmentation_params' not in st.session_state:
     st.session_state.segmentation_params = {
