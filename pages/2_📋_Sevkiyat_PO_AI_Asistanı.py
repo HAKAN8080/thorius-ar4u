@@ -14,6 +14,7 @@ import io
 from datetime import datetime
 import sqlite3
 import hashlib
+import zipfile
 from zipfile import ZipFile
 
 # ============================================
