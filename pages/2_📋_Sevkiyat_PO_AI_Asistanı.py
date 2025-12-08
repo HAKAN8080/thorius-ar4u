@@ -87,6 +87,34 @@ if 'segmentation_params' not in st.session_state:
 if 'cover_segment_matrix' not in st.session_state:
     st.session_state.cover_segment_matrix = None
 
+# 🆕 SEVKİYAT UYUMLULUĞU: anlik_stok_satis'i inventory_df'ye de kopyala
+if st.session_state.anlik_stok_satis is not None and st.session_state.inventory_df is None:
+    # Sevkiyat için gerekli kolonları kontrol et ve uyarla
+    df = st.session_state.anlik_stok_satis.copy()
+    
+    # Kolon isimlerini Sevkiyat formatına çevir
+    rename_map = {
+        'magaza_kod': 'STORE_CODE',
+        'urun_kod': 'PRODUCT_CODE',
+        'stok': 'AVAILABLE_STOCK',
+        'satis': 'WEEKLY_SALES'
+    }
+    
+    # Mevcut kolonları değiştir
+    for old_name, new_name in rename_map.items():
+        if old_name in df.columns:
+            df = df.rename(columns={old_name: new_name})
+    
+    # WEEKS_OF_SUPPLY hesapla (eğer yoksa)
+    if 'WEEKS_OF_SUPPLY' not in df.columns:
+        df['WEEKS_OF_SUPPLY'] = np.where(
+            df['WEEKLY_SALES'] > 0,
+            df['AVAILABLE_STOCK'] / df['WEEKLY_SALES'],
+            0
+        )
+    
+    st.session_state.inventory_df = df
+
 # ============================================
 # SIDEBAR
 # ============================================
@@ -439,6 +467,26 @@ elif menu_option == "📂 Veri Yükleme":
                     after_dedup = len(combined_df)
                     st.session_state.anlik_stok_satis = combined_df
                     
+                    # 🆕 Sevkiyat için inventory_df'ye de kopyala
+                    df_inv = combined_df.copy()
+                    rename_map = {
+                        'magaza_kod': 'STORE_CODE',
+                        'urun_kod': 'PRODUCT_CODE',
+                        'stok': 'AVAILABLE_STOCK',
+                        'satis': 'WEEKLY_SALES'
+                    }
+                    for old, new in rename_map.items():
+                        if old in df_inv.columns:
+                            df_inv = df_inv.rename(columns={old: new})
+                    
+                    if 'WEEKS_OF_SUPPLY' not in df_inv.columns:
+                        df_inv['WEEKS_OF_SUPPLY'] = np.where(
+                            df_inv['WEEKLY_SALES'] > 0,
+                            df_inv['AVAILABLE_STOCK'] / df_inv['WEEKLY_SALES'],
+                            0
+                        )
+                    st.session_state.inventory_df = df_inv
+                    
                     st.success(f"🎉 **Başarıyla birleştirildi!**")
                     for info in part_info:
                         st.write(info)
@@ -552,6 +600,27 @@ elif menu_option == "📂 Veri Yükleme":
                                 'Dosya': uploaded_file.name,
                                 'Durum': f"✅ {len(df_clean):,} satır"
                             })
+                            
+                            # 🆕 Eğer anlik_stok_satis yüklendiyse, inventory_df'ye de kopyala (Sevkiyat için)
+                            if matched_key == 'anlik_stok_satis':
+                                df_inv = df_clean.copy()
+                                rename_map = {
+                                    'magaza_kod': 'STORE_CODE',
+                                    'urun_kod': 'PRODUCT_CODE',
+                                    'stok': 'AVAILABLE_STOCK',
+                                    'satis': 'WEEKLY_SALES'
+                                }
+                                for old, new in rename_map.items():
+                                    if old in df_inv.columns:
+                                        df_inv = df_inv.rename(columns={old: new})
+                                
+                                if 'WEEKS_OF_SUPPLY' not in df_inv.columns:
+                                    df_inv['WEEKS_OF_SUPPLY'] = np.where(
+                                        df_inv['WEEKLY_SALES'] > 0,
+                                        df_inv['AVAILABLE_STOCK'] / df_inv['WEEKLY_SALES'],
+                                        0
+                                    )
+                                st.session_state.inventory_df = df_inv
                     
                     except Exception as e:
                         upload_results.append({
