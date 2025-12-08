@@ -1110,7 +1110,7 @@ elif menu_option == '🚢 Sevkiyat Planlama':
                 
                 # Cluster stats
                 st.dataframe(
-                    cluster_stats.style.background_gradient(subset=['AVG_STOCK', 'AVG_SALES'], cmap='YlOrRd'),
+                    cluster_stats,
                     use_container_width=True
                 )
                 
@@ -1120,10 +1120,7 @@ elif menu_option == '🚢 Sevkiyat Planlama':
                 # Store detayları
                 display_cols = ['STORE_CODE', 'CLUSTER', 'AVAILABLE_STOCK', 'WEEKLY_SALES', 'WEEKS_OF_SUPPLY']
                 st.dataframe(
-                    cluster_df[display_cols].sort_values('CLUSTER').style.background_gradient(
-                        subset=['AVAILABLE_STOCK', 'WEEKLY_SALES', 'WEEKS_OF_SUPPLY'],
-                        cmap='RdYlGn_r'
-                    ),
+                    cluster_df[display_cols].sort_values('CLUSTER'),
                     use_container_width=True,
                     height=400
                 )
@@ -1296,15 +1293,7 @@ elif menu_option == '🚢 Sevkiyat Planlama':
                 display_cols.append('FULFILLMENT_%')
                 
                 st.dataframe(
-                    display_df[display_cols].style.background_gradient(
-                        subset=['PRIORITY_SCORE', 'FULFILLMENT_%'],
-                        cmap='RdYlGn'
-                    ).applymap(
-                        lambda x: 'background-color: #ffcccc' if x == 'High' else (
-                            'background-color: #fff4cc' if x == 'Medium' else ''
-                        ),
-                        subset=['STOCKOUT_RISK']
-                    ),
+                    display_df[display_cols],
                     use_container_width=True,
                     height=400
                 )
@@ -1400,7 +1389,7 @@ elif menu_option == '🚢 Sevkiyat Planlama':
                     
                     # Matris gösterimi
                     st.dataframe(
-                        matrix_df.set_index('STORE_CODE').style.background_gradient(cmap='YlGn'),
+                        matrix_df.set_index('STORE_CODE'),
                         use_container_width=True,
                         height=600
                     )
@@ -1447,10 +1436,7 @@ elif menu_option == '🚢 Sevkiyat Planlama':
                     st.metric("Ort. Karşılama", f"{avg_fulfillment:.1f}%")
                 
                 st.dataframe(
-                    store_summary.style.background_gradient(
-                        subset=['TOTAL_ALLOCATED', 'FULFILLMENT_%'],
-                        cmap='RdYlGn'
-                    ),
+                    store_summary,
                     use_container_width=True,
                     height=400
                 )
@@ -1479,10 +1465,7 @@ elif menu_option == '🚢 Sevkiyat Planlama':
                     st.metric("Ort. Karşılama", f"{avg_fulfillment:.1f}%")
                 
                 st.dataframe(
-                    product_summary.style.background_gradient(
-                        subset=['TOTAL_ALLOCATED', 'FULFILLMENT_%'],
-                        cmap='RdYlGn'
-                    ),
+                    product_summary,
                     use_container_width=True,
                     height=400
                 )
@@ -1631,7 +1614,7 @@ elif menu_option == '🚢 Sevkiyat Planlama':
                 ]].copy()
                 
                 st.dataframe(
-                    display_cost_df.style.background_gradient(subset=['TOTAL_COST'], cmap='YlOrRd'),
+                    display_cost_df,
                     use_container_width=True,
                     height=400
                 )
