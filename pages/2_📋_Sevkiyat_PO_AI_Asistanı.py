@@ -164,13 +164,12 @@ if menu == "🏠 Ana Sayfa":
     **💵 Alım Sipariş:** Hesaplama sonrası "Alım Sipariş (PO)" sayfasına gidin.
     """)
     
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("➡️ Veri Yükleme Sayfasına Git", use_container_width=True):
-            st.switch_page("pages/0_Veri_Yukleme.py")
-    with col2:
-        if st.button("➡️ Alım Sipariş Sayfasına Git", use_container_width=True):
-            st.switch_page("pages/4_PO.py")
+    st.info("""
+    💡 **Hızlı Gezinme:**
+    - 📂 **Veri Yükleme:** Ana menüden "0_Veri_Yukleme" sayfasına gidin
+    - 🫧 **Segmentasyon:** Sol menüden seçin
+    - 💵 **PO İşlemleri:** Sol menüden "PO Hesaplama" seçin
+    """)
     
     st.markdown("---")
     
