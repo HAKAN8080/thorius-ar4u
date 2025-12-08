@@ -71,7 +71,6 @@ st.sidebar.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-st.sidebar.info("💡 Sidebar menüsünde gezinmek ücretsizdir!")
 
 
 st.set_page_config(
