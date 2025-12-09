@@ -1,5 +1,5 @@
 """
-🚢 Sevkiyat ML Modül - EVE Sevkiyat Planlama Sistemi
+🚢 Sevkiyat ML Modül -  Sevkiyat Planlama Sistemi
 Thorius AR4U Platform - Token-Based Access
 Matris Tabanlı Cover Optimizasyonu
 """
@@ -169,7 +169,7 @@ with st.sidebar:
             </span>
         </div>
         <div style='color: #495057; font-size: 0.85rem; margin-bottom: 8px;'>
-            <strong>EVE Sevkiyat Planlama Sistemi</strong>
+            <strong> Sevkiyat Planlama Sistemi</strong>
         </div>
         <div style='color: #6c757d; font-size: 0.8rem; line-height: 1.6;'>
             ✅ Matris tabanlı optimizasyon<br>
@@ -1437,7 +1437,7 @@ def show_reports():
 def show_main_page():
     st.markdown("""
     <div style="text-align: center; padding: 25px; background: linear-gradient(135deg, #1E40AF 0%, #1E3A8A 100%); color: white; border-radius: 15px; margin-bottom: 25px;">
-        <h1>📦 EVE Sevkiyat Planlama Sistemi</h1>
+        <h1>📦  Sevkiyat Planlama Sistemi</h1>
         <p>YENİ SİSTEM - Matris Tabanlı Cover Optimizasyonu</p>
     </div>
     """, unsafe_allow_html=True)
@@ -1617,7 +1617,7 @@ def show_main_page():
 # -------------------------------
 
 def main():
-    st.set_page_config(page_title="EVE Sevkiyat - Matris Sistemi", layout="wide")
+    st.set_page_config(page_title=" Sevkiyat - Matris Sistemi", layout="wide")
     
     # CSS stilleri
     st.markdown("""
